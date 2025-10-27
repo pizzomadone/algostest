@@ -249,14 +249,18 @@ public class FlowchartCanvas extends JPanel {
     }
 
     private void handleMouseDragged(MouseEvent e) {
+        // Aggiorna sempre la posizione del mouse per le connessioni in corso
+        currentMousePos = e.getPoint();
+
         if (draggedBlock != null) {
             Point newPos = new Point(
                 e.getX() - dragOffset.x,
                 e.getY() - dragOffset.y
             );
             draggedBlock.setPosition(newPos);
-            repaint();
         }
+
+        repaint();
     }
 
     private void handleDoubleClick(MouseEvent e) {
@@ -311,12 +315,27 @@ public class FlowchartCanvas extends JPanel {
         repaint();
     }
 
-    public void deleteSelectedBlock() {
-        if (selectedBlock != null) {
+    public void deleteSelected() {
+        if (selectedConnection != null) {
+            // Elimina la connessione selezionata
+            for (Block block : model.getBlocks()) {
+                if (block.getOutgoingConnections().remove(selectedConnection)) {
+                    selectedConnection = null;
+                    repaint();
+                    return;
+                }
+            }
+        } else if (selectedBlock != null) {
+            // Elimina il blocco selezionato
             model.removeBlock(selectedBlock);
             selectedBlock = null;
             repaint();
         }
+    }
+
+    public void deleteSelectedBlock() {
+        // Manteniamo per compatibilità, ma ora chiama deleteSelected
+        deleteSelected();
     }
 
     public void clearAll() {
