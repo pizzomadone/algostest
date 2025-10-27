@@ -36,15 +36,55 @@ public class ControlPanel extends JPanel {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 
         runButton = new JButton("Esegui Tutto");
-        runButton.setBackground(new Color(76, 175, 80));
+        Color runColor = new Color(46, 125, 50);
+        runButton.setBackground(runColor);
         runButton.setForeground(Color.WHITE);
         runButton.setFocusPainted(false);
+        runButton.setOpaque(true);
+        runButton.setContentAreaFilled(true);
+        runButton.setBorderPainted(false);
+        runButton.setFont(new Font("Arial", Font.BOLD, 12));
+        runButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        runButton.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(runColor.darker(), 2),
+            BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
+        runButton.addChangeListener(e -> {
+            if (runButton.isEnabled()) {
+                if (runButton.getModel().isPressed()) {
+                    runButton.setBackground(runColor.darker());
+                } else if (runButton.getModel().isRollover()) {
+                    runButton.setBackground(runColor.brighter());
+                } else {
+                    runButton.setBackground(runColor);
+                }
+            }
+        });
         runButton.addActionListener(e -> startExecution(false));
 
         stepButton = new JButton("Passo-Passo");
-        stepButton.setBackground(new Color(33, 150, 243));
+        Color stepColor = new Color(21, 101, 192);
+        stepButton.setBackground(stepColor);
         stepButton.setForeground(Color.WHITE);
         stepButton.setFocusPainted(false);
+        stepButton.setOpaque(true);
+        stepButton.setContentAreaFilled(true);
+        stepButton.setBorderPainted(false);
+        stepButton.setFont(new Font("Arial", Font.BOLD, 12));
+        stepButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        stepButton.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(stepColor.darker(), 2),
+            BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
+        stepButton.addChangeListener(e -> {
+            if (stepButton.getModel().isPressed()) {
+                stepButton.setBackground(stepColor.darker());
+            } else if (stepButton.getModel().isRollover()) {
+                stepButton.setBackground(stepColor.brighter());
+            } else {
+                stepButton.setBackground(stepColor);
+            }
+        });
         stepButton.addActionListener(e -> {
             if (!executor.isRunning()) {
                 startExecution(true);
@@ -54,13 +94,56 @@ public class ControlPanel extends JPanel {
         });
 
         stopButton = new JButton("Stop");
-        stopButton.setBackground(new Color(244, 67, 54));
+        Color stopColor = new Color(198, 40, 40);
+        stopButton.setBackground(stopColor);
         stopButton.setForeground(Color.WHITE);
         stopButton.setFocusPainted(false);
+        stopButton.setOpaque(true);
+        stopButton.setContentAreaFilled(true);
+        stopButton.setBorderPainted(false);
+        stopButton.setFont(new Font("Arial", Font.BOLD, 12));
+        stopButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        stopButton.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(stopColor.darker(), 2),
+            BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
         stopButton.setEnabled(false);
+        stopButton.addChangeListener(e -> {
+            if (stopButton.isEnabled()) {
+                if (stopButton.getModel().isPressed()) {
+                    stopButton.setBackground(stopColor.darker());
+                } else if (stopButton.getModel().isRollover()) {
+                    stopButton.setBackground(stopColor.brighter());
+                } else {
+                    stopButton.setBackground(stopColor);
+                }
+            }
+        });
         stopButton.addActionListener(e -> stopExecution());
 
         JButton clearOutputButton = new JButton("Pulisci Output");
+        Color clearColor = new Color(97, 97, 97);
+        clearOutputButton.setBackground(clearColor);
+        clearOutputButton.setForeground(Color.WHITE);
+        clearOutputButton.setFocusPainted(false);
+        clearOutputButton.setOpaque(true);
+        clearOutputButton.setContentAreaFilled(true);
+        clearOutputButton.setBorderPainted(false);
+        clearOutputButton.setFont(new Font("Arial", Font.BOLD, 11));
+        clearOutputButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        clearOutputButton.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(clearColor.darker(), 2),
+            BorderFactory.createEmptyBorder(3, 8, 3, 8)
+        ));
+        clearOutputButton.addChangeListener(e -> {
+            if (clearOutputButton.getModel().isPressed()) {
+                clearOutputButton.setBackground(clearColor.darker());
+            } else if (clearOutputButton.getModel().isRollover()) {
+                clearOutputButton.setBackground(clearColor.brighter());
+            } else {
+                clearOutputButton.setBackground(clearColor);
+            }
+        });
         clearOutputButton.addActionListener(e -> outputArea.setText(""));
 
         buttonPanel.add(runButton);
