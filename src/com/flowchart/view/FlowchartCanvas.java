@@ -312,7 +312,8 @@ public class FlowchartCanvas extends JPanel {
         if (block == selectedBlock) {
             g2d.setColor(blockColor.darker());
         } else if (block.isHighlighted()) {
-            g2d.setColor(Color.YELLOW);
+            // Colore giallo brillante per indicare esecuzione
+            g2d.setColor(new Color(255, 235, 59));
         } else {
             g2d.setColor(blockColor);
         }
@@ -324,7 +325,9 @@ public class FlowchartCanvas extends JPanel {
                 // Ovale
                 g2d.fillOval(pos.x, pos.y, size.width, size.height);
                 g2d.setColor(Color.BLACK);
+                g2d.setStroke(new BasicStroke(2));
                 g2d.drawOval(pos.x, pos.y, size.width, size.height);
+                g2d.setStroke(new BasicStroke(1));
                 break;
 
             case DECISION:
@@ -343,7 +346,9 @@ public class FlowchartCanvas extends JPanel {
                 };
                 g2d.fillPolygon(xPoints, yPoints, 4);
                 g2d.setColor(Color.BLACK);
+                g2d.setStroke(new BasicStroke(2));
                 g2d.drawPolygon(xPoints, yPoints, 4);
+                g2d.setStroke(new BasicStroke(1));
                 break;
 
             case INPUT:
@@ -364,7 +369,15 @@ public class FlowchartCanvas extends JPanel {
                 };
                 g2d.fillPolygon(xPointsIO, yPointsIO, 4);
                 g2d.setColor(Color.BLACK);
+                g2d.setStroke(new BasicStroke(2));
                 g2d.drawPolygon(xPointsIO, yPointsIO, 4);
+                g2d.setStroke(new BasicStroke(1));
+
+                // Disegna icona I o O in alto a sinistra
+                g2d.setFont(new Font("Arial", Font.BOLD, 20));
+                g2d.setColor(new Color(0, 0, 0, 100)); // Semi-trasparente
+                String icon = block.getType() == BlockType.INPUT ? "I" : "O";
+                g2d.drawString(icon, pos.x + 8, pos.y + 22);
                 break;
 
             case FOR_LOOP:
@@ -392,7 +405,9 @@ public class FlowchartCanvas extends JPanel {
                 };
                 g2d.fillPolygon(xPointsLoop, yPointsLoop, 6);
                 g2d.setColor(Color.BLACK);
+                g2d.setStroke(new BasicStroke(2));
                 g2d.drawPolygon(xPointsLoop, yPointsLoop, 6);
+                g2d.setStroke(new BasicStroke(1));
                 break;
 
             case PROCESS:
@@ -400,13 +415,24 @@ public class FlowchartCanvas extends JPanel {
                 // Rettangolo
                 g2d.fillRect(pos.x, pos.y, size.width, size.height);
                 g2d.setColor(Color.BLACK);
+                g2d.setStroke(new BasicStroke(2));
                 g2d.drawRect(pos.x, pos.y, size.width, size.height);
+                g2d.setStroke(new BasicStroke(1));
                 break;
+        }
+
+        // Se il blocco è evidenziato (in esecuzione), disegna un bordo spesso lampeggiante
+        if (block.isHighlighted()) {
+            g2d.setColor(new Color(255, 215, 0)); // Oro
+            g2d.setStroke(new BasicStroke(5));
+            // Disegna un rettangolo esterno come indicatore
+            g2d.drawRect(pos.x - 5, pos.y - 5, size.width + 10, size.height + 10);
+            g2d.setStroke(new BasicStroke(1));
         }
 
         // Disegna il testo
         g2d.setColor(Color.BLACK);
-        g2d.setFont(new Font("Arial", Font.PLAIN, 11));
+        g2d.setFont(new Font("Arial", Font.BOLD, 13));
         drawCenteredString(g2d, block.getText(), pos.x, pos.y, size.width, size.height);
     }
 

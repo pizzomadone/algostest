@@ -373,6 +373,26 @@ public class FlowchartExecutor {
             condition = condition.replace(entry.getKey(), entry.getValue().toString());
         }
 
+        // Gestisci operatori logici OR (ha priorità più bassa)
+        if (condition.toLowerCase().contains(" or ")) {
+            String[] parts = condition.toLowerCase().split(" or ");
+            boolean result = false;
+            for (String part : parts) {
+                result = result || evaluateCondition(part.trim());
+            }
+            return result;
+        }
+
+        // Gestisci operatori logici AND (ha priorità più alta)
+        if (condition.toLowerCase().contains(" and ")) {
+            String[] parts = condition.toLowerCase().split(" and ");
+            boolean result = true;
+            for (String part : parts) {
+                result = result && evaluateCondition(part.trim());
+            }
+            return result;
+        }
+
         // Valuta condizioni semplici
         if (condition.contains("==")) {
             String[] parts = condition.split("==");

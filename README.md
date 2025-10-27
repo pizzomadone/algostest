@@ -19,13 +19,16 @@ Un'applicazione Java con interfaccia grafica per creare ed eseguire algoritmi ut
   - Esecuzione completa (tutti i blocchi in sequenza)
   - Esecuzione passo-passo (un blocco alla volta)
 - **Visualizzazione in tempo reale:**
-  - Evidenziazione del blocco in esecuzione
+  - **Evidenziazione migliorata**: i blocchi in esecuzione si illuminano in giallo brillante con bordo oro spesso
   - Output dell'esecuzione
-  - Tabella delle variabili con i loro valori
+  - Tabella delle variabili con i loro valori in tempo reale
 - **Editor interattivo:**
   - Drag & drop per spostare i blocchi
   - Click destro per creare connessioni tra blocchi
   - Doppio click per modificare il testo dei blocchi
+  - **Testo leggibile**: font bold 13pt per massima chiarezza
+  - **Icone identificative**: blocchi Input/Output mostrano "I" o "O" per identificazione immediata
+  - **Bordi spessi**: tutti i blocchi hanno bordi 2px per migliore visibilità
 
 ## Requisiti
 
@@ -105,9 +108,10 @@ Nel pannello di controllo a destra:
 - **Pulisci Output**: cancella l'output dell'esecuzione
 
 Durante l'esecuzione:
-- Il blocco corrente viene evidenziato in giallo
+- **Il blocco corrente si illumina**: sfondo giallo brillante con bordo oro spesso (5px) per massima visibilità
 - L'output appare nell'area "Output Esecuzione"
-- Le variabili e i loro valori appaiono nella tabella "Variabili"
+- Le variabili e i loro valori appaiono nella tabella "Variabili" in tempo reale
+- I blocchi Input/Output mostrano chiaramente "I" o "O" per identificazione immediata
 
 ## Sintassi dei Blocchi
 
@@ -132,7 +136,20 @@ y <= 100
 x < y
 ```
 
-Operatori supportati: `>`, `<`, `>=`, `<=`, `==`, `!=`
+Operatori di confronto supportati: `>`, `<`, `>=`, `<=`, `==`, `!=`
+
+**Operatori logici** (NUOVO!):
+```
+x > 0 AND x < 10        (entrambe le condizioni devono essere vere)
+x == 0 OR x == 10       (almeno una delle condizioni deve essere vera)
+x > 5 AND y < 3         (combina più condizioni con AND)
+x < 0 OR x > 100        (vera se x è negativo O maggiore di 100)
+```
+
+Operatori logici supportati:
+- **AND**: entrambe le condizioni devono essere vere
+- **OR**: almeno una delle condizioni deve essere vera
+- Si possono combinare più condizioni: `x > 0 AND x < 10 AND x != 5`
 
 ### Blocco Input
 Legge un valore dall'utente:
