@@ -358,7 +358,9 @@ public class FlowchartCanvas extends JPanel {
         if (connectionSourceBlock != null && currentMousePos != null) {
             g2d.setColor(Color.GRAY);
             g2d.setStroke(new BasicStroke(2, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 0, new float[]{5}, 0));
-            Point sourcePoint = connectionSourceBlock.getConnectionPoint("bottom");
+            // Calcola dinamicamente il lato in base alla posizione del mouse
+            String sourceEdge = Connection.calculateBestEdge(connectionSourceBlock, currentMousePos);
+            Point sourcePoint = connectionSourceBlock.getConnectionPoint(sourceEdge);
             g2d.drawLine(sourcePoint.x, sourcePoint.y, currentMousePos.x, currentMousePos.y);
             g2d.setStroke(new BasicStroke(1));
         }
@@ -372,8 +374,9 @@ public class FlowchartCanvas extends JPanel {
     private void drawConnections(Graphics2D g2d) {
         for (Block block : model.getBlocks()) {
             for (Connection conn : block.getOutgoingConnections()) {
-                Point source = conn.getSourceBlock().getConnectionPoint("bottom");
-                Point target = conn.getTargetBlock().getConnectionPoint("top");
+                // Usa i lati salvati nella connessione
+                Point source = conn.getSourceBlock().getConnectionPoint(conn.getSourceEdge());
+                Point target = conn.getTargetBlock().getConnectionPoint(conn.getTargetEdge());
 
                 // Se la connessione è selezionata, evidenziala
                 if (conn == selectedConnection) {

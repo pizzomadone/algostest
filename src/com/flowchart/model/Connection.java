@@ -12,6 +12,8 @@ public class Connection implements Serializable {
     private Block sourceBlock;
     private Block targetBlock;
     private String label; // Per le connessioni condizionali (es: "SI", "NO")
+    private String sourceEdge; // Lato da cui esce la connessione: "top", "bottom", "left", "right"
+    private String targetEdge; // Lato in cui entra la connessione: "top", "bottom", "left", "right"
 
     public Connection(Block sourceBlock, Block targetBlock) {
         this(sourceBlock, targetBlock, "");
@@ -21,6 +23,51 @@ public class Connection implements Serializable {
         this.sourceBlock = sourceBlock;
         this.targetBlock = targetBlock;
         this.label = label;
+        // Calcola automaticamente i lati migliori
+        calculateBestEdges();
+    }
+
+    public Connection(Block sourceBlock, Block targetBlock, String label, String sourceEdge, String targetEdge) {
+        this.sourceBlock = sourceBlock;
+        this.targetBlock = targetBlock;
+        this.label = label;
+        this.sourceEdge = sourceEdge;
+        this.targetEdge = targetEdge;
+    }
+
+    /**
+     * Calcola automaticamente i lati migliori per connettere i due blocchi
+     */
+    private void calculateBestEdges() {
+        Point sourceCenter = new Point(
+            sourceBlock.getPosition().x + sourceBlock.getSize().width / 2,
+            sourceBlock.getPosition().y + sourceBlock.getSize().height / 2
+        );
+        Point targetCenter = new Point(
+            targetBlock.getPosition().x + targetBlock.getSize().width / 2,
+            targetBlock.getPosition().y + targetBlock.getSize().height / 2
+        );
+
+        double dx = targetCenter.x - sourceCenter.x;
+        double dy = targetCenter.y - sourceCenter.y;
+
+        // Determina il lato del source block
+        if (Math.abs(dx) > Math.abs(dy)) {
+            // Connessione prevalentemente orizzontale
+            sourceEdge = dx > 0 ? "right" : "left";
+        } else {
+            // Connessione prevalentemente verticale
+            sourceEdge = dy > 0 ? "bottom" : "top";
+        }
+
+        // Determina il lato del target block (opposto rispetto alla direzione)
+        if (Math.abs(dx) > Math.abs(dy)) {
+            // Connessione prevalentemente orizzontale
+            targetEdge = dx > 0 ? "left" : "right";
+        } else {
+            // Connessione prevalentemente verticale
+            targetEdge = dy > 0 ? "top" : "bottom";
+        }
     }
 
     public Block getSourceBlock() {
@@ -39,13 +86,40 @@ public class Connection implements Serializable {
         this.label = label;
     }
 
+    public String getSourceEdge() {
+        return sourceEdge;
+    }
+
+    public String getTargetEdge() {
+        return targetEdge;
+    }
+
     /**
      * Restituisce il punto medio della connessione (dove disegnare la pallina)
      */
     public Point getMidpoint() {
-        Point source = sourceBlock.getConnectionPoint("bottom");
-        Point target = targetBlock.getConnectionPoint("top");
+        Point source = sourceBlock.getConnectionPoint(sourceEdge);
+        Point target = targetBlock.getConnectionPoint(targetEdge);
         return new Point((source.x + target.x) / 2, (source.y + target.y) / 2);
+    }
+
+    /**
+     * Calcola il lato migliore da cui uscire in base alla posizione del mouse
+     */
+    public static String calculateBestEdge(Block block, Point mousePos) {
+        Point blockCenter = new Point(
+            block.getPosition().x + block.getSize().width / 2,
+            block.getPosition().y + block.getSize().height / 2
+        );
+
+        double dx = mousePos.x - blockCenter.x;
+        double dy = mousePos.y - blockCenter.y;
+
+        if (Math.abs(dx) > Math.abs(dy)) {
+            return dx > 0 ? "right" : "left";
+        } else {
+            return dy > 0 ? "bottom" : "top";
+        }
     }
 
     @Override
