@@ -430,7 +430,7 @@ public class FlowchartExecutor {
                 String label = conn.getLabel().toUpperCase();
                 if ((output.equals("VERO") && (label.contains("SI") || label.contains("TRUE") || label.contains("VERO"))) ||
                     (output.equals("FALSO") && (label.contains("NO") || label.contains("FALSE") || label.contains("FALSO")))) {
-                    return conn.getTargetBlock();
+                    return getActualTargetBlock(conn);
                 }
             }
         }
@@ -443,19 +443,36 @@ public class FlowchartExecutor {
                 String label = conn.getLabel().toUpperCase();
                 if ((output.equals("CONTINUA") && (label.contains("SI") || label.contains("CORPO") || label.contains("CONTINUA"))) ||
                     (output.equals("ESCI") && (label.contains("NO") || label.contains("ESCI") || label.contains("FINE")))) {
-                    return conn.getTargetBlock();
+                    return getActualTargetBlock(conn);
                 }
             }
             // Se non trova etichette specifiche, usa comportamento predefinito
             if (output.equals("CONTINUA") && connections.size() > 0) {
-                return connections.get(0).getTargetBlock();
+                return getActualTargetBlock(connections.get(0));
             } else if (output.equals("ESCI") && connections.size() > 1) {
-                return connections.get(1).getTargetBlock();
+                return getActualTargetBlock(connections.get(1));
             }
         }
 
         // Per altri blocchi, prendi la prima connessione
-        return connections.get(0).getTargetBlock();
+        return getActualTargetBlock(connections.get(0));
+    }
+
+    /**
+     * Restituisce il blocco target effettivo di una connessione.
+     * Se la connessione punta a un pallino blu (midpoint), restituisce il blocco target
+     * della connessione originale su cui si trova il pallino.
+     */
+    private Block getActualTargetBlock(Connection conn) {
+        if (conn.isTargetingMidpoint()) {
+            // La connessione punta a un pallino blu (midpoint di un'altra connessione)
+            // Continua verso il blocco target della connessione originale
+            Connection targetConn = conn.getTargetMidpointConnection();
+            return targetConn.getTargetBlock();
+        } else {
+            // Connessione normale a un blocco
+            return conn.getTargetBlock();
+        }
     }
 
     public void stopExecution() {
