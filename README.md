@@ -12,6 +12,9 @@ Un'applicazione Java con interfaccia grafica per creare ed eseguire algoritmi ut
   - Decisione (condizioni if/else)
   - Input (lettura dati dall'utente)
   - Output (visualizzazione dati)
+  - Ciclo FOR (iterazione con contatore)
+  - Ciclo WHILE (ripetizione con condizione precondizionale)
+  - Ciclo DO-WHILE (ripetizione con condizione postcondizionale)
 - **Modalità di esecuzione:**
   - Esecuzione completa (tutti i blocchi in sequenza)
   - Esecuzione passo-passo (un blocco alla volta)
@@ -65,12 +68,15 @@ java -cp bin com.flowchart.Main
 ### 1. Creare Blocchi
 
 Clicca sui pulsanti colorati nella palette a sinistra per aggiungere blocchi al canvas:
-- **Inizio** (verde): punto di partenza dell'algoritmo
-- **Fine** (rosso): punto di termine dell'algoritmo
+- **Inizio** (verde scuro): punto di partenza dell'algoritmo
+- **Fine** (rosso scuro): punto di termine dell'algoritmo
 - **Processo** (blu): esegue operazioni matematiche o assegnazioni
 - **Decisione** (arancione): valuta una condizione (if/else)
 - **Input** (viola): legge un valore dall'utente
-- **Output** (viola): mostra un valore all'utente
+- **Output** (viola scuro): mostra un valore all'utente
+- **Ciclo FOR** (teal): ripete il corpo per un numero definito di volte
+- **Ciclo WHILE** (verde acqua): ripete il corpo finché la condizione è vera
+- **Ciclo DO-WHILE** (verde scuro): esegue il corpo almeno una volta, poi ripete finché la condizione è vera
 
 ### 2. Posizionare e Modificare i Blocchi
 
@@ -84,7 +90,9 @@ Clicca sui pulsanti colorati nella palette a sinistra per aggiungere blocchi al 
 1. Click destro sul blocco sorgente (da cui parte la connessione)
 2. Tieni premuto e trascina verso il blocco destinazione
 3. Rilascia il mouse sul blocco destinazione
-4. Per i blocchi **Decisione**, scegli l'etichetta: SI, NO, o personalizza
+4. Per i blocchi **Decisione** e **Cicli**, scegli l'etichetta:
+   - **Decisione**: SI, NO, o personalizza
+   - **Cicli**: CORPO (SI) per il corpo del ciclo, ESCI (NO) per uscire dal ciclo
 
 ### 4. Eseguire il Diagramma
 
@@ -143,6 +151,52 @@ x          (mostra il valore della variabile x)
 risultato  (mostra il valore della variabile risultato)
 ```
 
+### Blocco Ciclo FOR
+Ripete il corpo per un numero definito di volte:
+```
+i=0; i<10; i=i+1    (inizializza i a 0, continua mentre i<10, incrementa i di 1 ad ogni iterazione)
+```
+
+Sintassi: `inizializzazione; condizione; incremento`
+- **inizializzazione**: eseguita una sola volta all'inizio (es: `i=0`)
+- **condizione**: valutata prima di ogni iterazione (es: `i<10`)
+- **incremento**: eseguito alla fine di ogni iterazione (es: `i=i+1`)
+
+Il ciclo FOR ha due connessioni:
+- **CORPO (SI)**: verso il blocco da eseguire ripetutamente
+- **ESCI (NO)**: verso il blocco successivo quando il ciclo termina
+
+### Blocco Ciclo WHILE
+Ripete il corpo finché la condizione è vera:
+```
+i < 10          (continua a ripetere finché i è minore di 10)
+x != 0          (continua finché x è diverso da 0)
+```
+
+La condizione viene valutata **prima** di ogni iterazione. Se è falsa dall'inizio, il corpo non viene mai eseguito.
+
+Il ciclo WHILE ha due connessioni:
+- **CORPO (SI)**: verso il blocco da eseguire ripetutamente
+- **ESCI (NO)**: verso il blocco successivo quando la condizione diventa falsa
+
+### Blocco Ciclo DO-WHILE
+Esegue il corpo almeno una volta, poi ripete finché la condizione è vera:
+```
+i < 10          (continua a ripetere finché i è minore di 10)
+```
+
+La condizione viene valutata **dopo** ogni iterazione. Il corpo viene eseguito almeno una volta, anche se la condizione è falsa dall'inizio.
+
+Il ciclo DO-WHILE ha due connessioni:
+- **CORPO (SI)**: verso il blocco da eseguire ripetutamente
+- **ESCI (NO)**: verso il blocco successivo quando la condizione diventa falsa
+
+**Nota importante sui cicli**: Per creare un ciclo funzionante, devi:
+1. Creare il blocco ciclo
+2. Collegarlo al primo blocco del corpo (etichetta: CORPO/SI)
+3. Collegare l'ultimo blocco del corpo di nuovo al blocco ciclo (questa connessione farà ripetere)
+4. Collegare il blocco ciclo al blocco successivo (etichetta: ESCI/NO) per uscire quando la condizione è falsa
+
 ## Esempi di Algoritmi
 
 ### Esempio 1: Somma di Due Numeri
@@ -171,17 +225,40 @@ risultato  (mostra il valore della variabile risultato)
    - Entrambi gli Output → Fine
 7. Esegui l'algoritmo
 
-### Esempio 3: Calcolo del Fattoriale (Iterativo Simulato)
+### Esempio 3: Somma dei Primi N Numeri (con Ciclo FOR)
 1. Aggiungi un blocco **Inizio**
 2. Aggiungi un blocco **Input** con testo `n`
-3. Aggiungi un blocco **Processo** con testo `fatto = 1`
-4. Aggiungi un blocco **Processo** con testo `i = 1`
-5. Aggiungi un blocco **Decisione** con testo `i <= n`
-6. Aggiungi un blocco **Processo** con testo `fatto = fatto * i`
-7. Aggiungi un blocco **Processo** con testo `i = i + 1`
-8. Aggiungi un blocco **Output** con testo `fatto`
-9. Aggiungi un blocco **Fine**
-10. Collega i blocchi per creare un ciclo e poi esci quando `i > n`
+3. Aggiungi un blocco **Processo** con testo `somma = 0`
+4. Aggiungi un blocco **Ciclo FOR** con testo `i=1; i<=n; i=i+1`
+5. Aggiungi un blocco **Processo** con testo `somma = somma + i`
+6. Aggiungi un blocco **Output** con testo `somma`
+7. Aggiungi un blocco **Fine**
+8. Collega:
+   - Inizio → Input
+   - Input → Processo (somma = 0)
+   - Processo → Ciclo FOR
+   - Ciclo FOR → Processo (somma = somma + i) con etichetta **SI**
+   - Processo (somma = somma + i) → Ciclo FOR (chiude il ciclo)
+   - Ciclo FOR → Output con etichetta **NO**
+   - Output → Fine
+9. Esegui l'algoritmo e inserisci un numero (es: 10)
+10. Il risultato sarà la somma 1+2+3+...+10 = 55
+
+### Esempio 4: Contatore con WHILE
+1. Aggiungi un blocco **Inizio**
+2. Aggiungi un blocco **Processo** con testo `i = 0`
+3. Aggiungi un blocco **Ciclo WHILE** con testo `i < 5`
+4. Aggiungi un blocco **Output** con testo `i`
+5. Aggiungi un blocco **Processo** con testo `i = i + 1`
+6. Aggiungi un blocco **Fine**
+7. Collega:
+   - Inizio → Processo (i = 0)
+   - Processo → Ciclo WHILE
+   - Ciclo WHILE → Output con etichetta **SI**
+   - Output → Processo (i = i + 1)
+   - Processo (i = i + 1) → Ciclo WHILE (chiude il ciclo)
+   - Ciclo WHILE → Fine con etichetta **NO**
+8. Esegui per vedere i numeri da 0 a 4
 
 ## Menu
 

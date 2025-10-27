@@ -4,12 +4,15 @@ package com.flowchart.model;
  * Enumerazione dei tipi di blocchi disponibili nel diagramma a blocchi
  */
 public enum BlockType {
-    START("Inizio", "#4CAF50"),
-    END("Fine", "#F44336"),
-    PROCESS("Processo", "#2196F3"),
-    DECISION("Decisione", "#FF9800"),
-    INPUT("Input", "#9C27B0"),
-    OUTPUT("Output", "#9C27B0");
+    START("Inizio", "#2E7D32"),
+    END("Fine", "#C62828"),
+    PROCESS("Processo", "#1565C0"),
+    DECISION("Decisione", "#E65100"),
+    INPUT("Input", "#6A1B9A"),
+    OUTPUT("Output", "#4A148C"),
+    FOR_LOOP("Ciclo FOR", "#00838F"),
+    WHILE_LOOP("Ciclo WHILE", "#00695C"),
+    DO_WHILE_LOOP("Ciclo DO-WHILE", "#004D40");
 
     private final String displayName;
     private final String color;

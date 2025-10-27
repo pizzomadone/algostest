@@ -120,6 +120,15 @@ public class FlowchartExecutor {
             case DECISION:
                 return executeDecision(block);
 
+            case FOR_LOOP:
+                return executeForLoop(block);
+
+            case WHILE_LOOP:
+                return executeWhileLoop(block);
+
+            case DO_WHILE_LOOP:
+                return executeDoWhileLoop(block);
+
             default:
                 return "";
         }
@@ -197,6 +206,94 @@ public class FlowchartExecutor {
             return result ? "VERO" : "FALSO";
         } catch (Exception e) {
             return "Errore condizione: " + e.getMessage();
+        }
+    }
+
+    private String executeForLoop(Block block) {
+        String text = block.getText().trim();
+        String loopStateKey = "__for_" + block.getId();
+
+        try {
+            // Controlla se il ciclo è già stato inizializzato
+            if (!model.getVariables().containsKey(loopStateKey)) {
+                // Prima volta: esegui inizializzazione
+                String[] parts = text.split(";");
+                if (parts.length >= 3) {
+                    // Esegui inizializzazione (es: i=0)
+                    String init = parts[0].trim();
+                    if (init.contains("=")) {
+                        String[] initParts = init.split("=", 2);
+                        String varName = initParts[0].trim();
+                        Object value = evaluateExpression(initParts[1].trim());
+                        model.setVariable(varName, value);
+                        notifyVariableChanged(varName, value);
+                    }
+                    model.setVariable(loopStateKey, "initialized");
+                }
+            } else {
+                // Ciclo già inizializzato, esegui incremento
+                String[] parts = text.split(";");
+                if (parts.length >= 3) {
+                    String increment = parts[2].trim();
+                    if (increment.contains("=")) {
+                        String[] incParts = increment.split("=", 2);
+                        String varName = incParts[0].trim();
+                        Object value = evaluateExpression(incParts[1].trim());
+                        model.setVariable(varName, value);
+                        notifyVariableChanged(varName, value);
+                    }
+                }
+            }
+
+            // Valuta la condizione
+            String[] parts = text.split(";");
+            if (parts.length >= 2) {
+                String condition = parts[1].trim();
+                boolean result = evaluateCondition(condition);
+                if (!result) {
+                    // Ciclo terminato, rimuovi lo stato
+                    model.getVariables().remove(loopStateKey);
+                }
+                return result ? "CONTINUA" : "ESCI";
+            }
+            return "ESCI";
+        } catch (Exception e) {
+            model.getVariables().remove(loopStateKey);
+            return "Errore FOR: " + e.getMessage();
+        }
+    }
+
+    private String executeWhileLoop(Block block) {
+        String condition = block.getText().trim();
+
+        try {
+            boolean result = evaluateCondition(condition);
+            return result ? "CONTINUA" : "ESCI";
+        } catch (Exception e) {
+            return "Errore WHILE: " + e.getMessage();
+        }
+    }
+
+    private String executeDoWhileLoop(Block block) {
+        String condition = block.getText().trim();
+        String loopStateKey = "__dowhile_" + block.getId();
+
+        try {
+            // Per DO-WHILE, la prima volta esegue sempre il corpo
+            if (!model.getVariables().containsKey(loopStateKey)) {
+                model.setVariable(loopStateKey, "entered");
+                return "CONTINUA";
+            }
+
+            // Dalle volte successive, valuta la condizione
+            boolean result = evaluateCondition(condition);
+            if (!result) {
+                model.getVariables().remove(loopStateKey);
+            }
+            return result ? "CONTINUA" : "ESCI";
+        } catch (Exception e) {
+            model.getVariables().remove(loopStateKey);
+            return "Errore DO-WHILE: " + e.getMessage();
         }
     }
 
@@ -315,6 +412,25 @@ public class FlowchartExecutor {
                     (output.equals("FALSO") && (label.contains("NO") || label.contains("FALSE") || label.contains("FALSO")))) {
                     return conn.getTargetBlock();
                 }
+            }
+        }
+
+        // Per blocchi cicli, cerca la connessione appropriata
+        if (block.getType() == BlockType.FOR_LOOP ||
+            block.getType() == BlockType.WHILE_LOOP ||
+            block.getType() == BlockType.DO_WHILE_LOOP) {
+            for (Connection conn : connections) {
+                String label = conn.getLabel().toUpperCase();
+                if ((output.equals("CONTINUA") && (label.contains("SI") || label.contains("CORPO") || label.contains("CONTINUA"))) ||
+                    (output.equals("ESCI") && (label.contains("NO") || label.contains("ESCI") || label.contains("FINE")))) {
+                    return conn.getTargetBlock();
+                }
+            }
+            // Se non trova etichette specifiche, usa comportamento predefinito
+            if (output.equals("CONTINUA") && connections.size() > 0) {
+                return connections.get(0).getTargetBlock();
+            } else if (output.equals("ESCI") && connections.size() > 1) {
+                return connections.get(1).getTargetBlock();
             }
         }
 

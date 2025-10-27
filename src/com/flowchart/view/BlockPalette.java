@@ -30,17 +30,21 @@ public class BlockPalette extends JPanel {
         add(Box.createRigidArea(new Dimension(0, 20)));
 
         JButton deleteButton = new JButton("Elimina");
-        deleteButton.setBackground(new Color(244, 67, 54));
+        deleteButton.setBackground(new Color(198, 40, 40));
         deleteButton.setForeground(Color.WHITE);
         deleteButton.setFocusPainted(false);
+        deleteButton.setOpaque(true);
+        deleteButton.setFont(new Font("Arial", Font.BOLD, 12));
         deleteButton.addActionListener(e -> canvas.deleteSelectedBlock());
         add(deleteButton);
 
         // Aggiungi pulsante per pulire tutto
         JButton clearButton = new JButton("Pulisci Tutto");
-        clearButton.setBackground(new Color(158, 158, 158));
+        clearButton.setBackground(new Color(97, 97, 97));
         clearButton.setForeground(Color.WHITE);
         clearButton.setFocusPainted(false);
+        clearButton.setOpaque(true);
+        clearButton.setFont(new Font("Arial", Font.BOLD, 12));
         clearButton.addActionListener(e -> {
             int result = JOptionPane.showConfirmDialog(
                 this,
@@ -60,6 +64,9 @@ public class BlockPalette extends JPanel {
         button.setBackground(Color.decode(type.getColor()));
         button.setForeground(Color.WHITE);
         button.setFocusPainted(false);
+        button.setOpaque(true);
+        button.setBorderPainted(true);
+        button.setFont(new Font("Arial", Font.BOLD, 11));
         button.setToolTipText("Clicca per aggiungere un blocco " + type.getDisplayName());
 
         button.addActionListener(e -> canvas.addBlock(type));

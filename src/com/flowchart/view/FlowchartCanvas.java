@@ -92,13 +92,40 @@ public class FlowchartCanvas extends JPanel {
             // Completa la connessione
             Block targetBlock = model.getBlockAt(e.getX(), e.getY());
             if (targetBlock != null && targetBlock != connectionSourceBlock) {
-                // Per blocchi decisionali, chiedi l'etichetta
+                // Per blocchi decisionali e cicli, chiedi l'etichetta
                 if (connectionSourceBlock.getType() == BlockType.DECISION) {
                     String[] options = {"SI", "NO", "Personalizza"};
                     int choice = JOptionPane.showOptionDialog(
                         this,
                         "Scegli l'etichetta per la connessione:",
                         "Etichetta Connessione",
+                        JOptionPane.DEFAULT_OPTION,
+                        JOptionPane.QUESTION_MESSAGE,
+                        null,
+                        options,
+                        options[0]
+                    );
+
+                    if (choice == 0) {
+                        connectionLabel = "SI";
+                    } else if (choice == 1) {
+                        connectionLabel = "NO";
+                    } else if (choice == 2) {
+                        connectionLabel = JOptionPane.showInputDialog(
+                            this,
+                            "Inserisci etichetta:",
+                            "SI"
+                        );
+                        if (connectionLabel == null) connectionLabel = "";
+                    }
+                } else if (connectionSourceBlock.getType() == BlockType.FOR_LOOP ||
+                           connectionSourceBlock.getType() == BlockType.WHILE_LOOP ||
+                           connectionSourceBlock.getType() == BlockType.DO_WHILE_LOOP) {
+                    String[] options = {"CORPO (SI)", "ESCI (NO)", "Personalizza"};
+                    int choice = JOptionPane.showOptionDialog(
+                        this,
+                        "Scegli l'etichetta per la connessione del ciclo:",
+                        "Etichetta Connessione Ciclo",
                         JOptionPane.DEFAULT_OPTION,
                         JOptionPane.QUESTION_MESSAGE,
                         null,
@@ -177,6 +204,15 @@ public class FlowchartCanvas extends JPanel {
                 break;
             case OUTPUT:
                 defaultText = "x";
+                break;
+            case FOR_LOOP:
+                defaultText = "i=0; i<10; i=i+1";
+                break;
+            case WHILE_LOOP:
+                defaultText = "i < 10";
+                break;
+            case DO_WHILE_LOOP:
+                defaultText = "i < 10";
                 break;
         }
 
@@ -329,6 +365,34 @@ public class FlowchartCanvas extends JPanel {
                 g2d.fillPolygon(xPointsIO, yPointsIO, 4);
                 g2d.setColor(Color.BLACK);
                 g2d.drawPolygon(xPointsIO, yPointsIO, 4);
+                break;
+
+            case FOR_LOOP:
+            case WHILE_LOOP:
+            case DO_WHILE_LOOP:
+                // Esagono (forma tipica per cicli)
+                int w = size.width;
+                int h = size.height;
+                int indent = 20;
+                int[] xPointsLoop = {
+                    pos.x + indent,
+                    pos.x + w - indent,
+                    pos.x + w,
+                    pos.x + w - indent,
+                    pos.x + indent,
+                    pos.x
+                };
+                int[] yPointsLoop = {
+                    pos.y,
+                    pos.y,
+                    pos.y + h / 2,
+                    pos.y + h,
+                    pos.y + h,
+                    pos.y + h / 2
+                };
+                g2d.fillPolygon(xPointsLoop, yPointsLoop, 6);
+                g2d.setColor(Color.BLACK);
+                g2d.drawPolygon(xPointsLoop, yPointsLoop, 6);
                 break;
 
             case PROCESS:

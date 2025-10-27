@@ -173,7 +173,10 @@ public class ControlPanel extends JPanel {
         SwingUtilities.invokeLater(() -> {
             tableModel.setRowCount(0);
             executor.getModel().getVariables().forEach((name, value) -> {
-                tableModel.addRow(new Object[]{name, value});
+                // Filtra le variabili interne (che iniziano con __)
+                if (!name.startsWith("__")) {
+                    tableModel.addRow(new Object[]{name, value});
+                }
             });
         });
     }
