@@ -25,16 +25,50 @@ public class FlowchartModel implements Serializable {
     }
 
     public void removeBlock(Block block) {
+        // Prima trova tutte le connessioni che saranno eliminate
+        List<Connection> connectionsToRemove = new ArrayList<>();
+        for (Block b : blocks) {
+            for (Connection conn : b.getOutgoingConnections()) {
+                // Controlla se la connessione coinvolge il blocco da rimuovere
+                boolean shouldRemove = false;
+
+                // Controlla se il source è il blocco da rimuovere
+                if (conn.getSourceBlock().equals(block)) {
+                    shouldRemove = true;
+                }
+
+                // Controlla se il target è il blocco da rimuovere (solo se non punta a midpoint)
+                if (!conn.isTargetingMidpoint() && conn.getTargetBlock() != null && conn.getTargetBlock().equals(block)) {
+                    shouldRemove = true;
+                }
+
+                if (shouldRemove) {
+                    connectionsToRemove.add(conn);
+                }
+            }
+        }
+
         // Rimuovi tutte le connessioni associate al blocco
         for (Block b : blocks) {
             List<Connection> toRemove = new ArrayList<>();
             for (Connection conn : b.getOutgoingConnections()) {
-                if (conn.getTargetBlock().equals(block) || conn.getSourceBlock().equals(block)) {
+                // Rimuovi la connessione se è nella lista
+                if (connectionsToRemove.contains(conn)) {
                     toRemove.add(conn);
+                    continue;
+                }
+
+                // Rimuovi anche le connessioni che puntano ai pallini blu delle connessioni eliminate
+                if (conn.isTargetingMidpoint()) {
+                    Connection targetMidpoint = conn.getTargetMidpointConnection();
+                    if (connectionsToRemove.contains(targetMidpoint)) {
+                        toRemove.add(conn);
+                    }
                 }
             }
             b.getOutgoingConnections().removeAll(toRemove);
         }
+
         blocks.remove(block);
     }
 
