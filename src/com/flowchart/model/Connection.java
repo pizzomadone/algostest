@@ -1,5 +1,6 @@
 package com.flowchart.model;
 
+import java.awt.Point;
 import java.io.Serializable;
 
 /**
@@ -38,9 +39,19 @@ public class Connection implements Serializable {
         this.label = label;
     }
 
+    /**
+     * Restituisce il punto medio della connessione (dove disegnare la pallina)
+     */
+    public Point getMidpoint() {
+        Point source = sourceBlock.getConnectionPoint("bottom");
+        Point target = targetBlock.getConnectionPoint("top");
+        return new Point((source.x + target.x) / 2, (source.y + target.y) / 2);
+    }
+
     @Override
     public String toString() {
         return sourceBlock.getId() + " -> " + targetBlock.getId() +
                (label.isEmpty() ? "" : " (" + label + ")");
     }
 }
+

@@ -136,6 +136,26 @@ public class FlowchartCanvas extends JPanel {
         return null;
     }
 
+    private Connection getConnectionMidpointAt(int x, int y) {
+        // Trova se il punto è vicino a una pallina (punto medio di una connessione)
+        for (Block block : model.getBlocks()) {
+            for (Connection conn : block.getOutgoingConnections()) {
+                Point midpoint = conn.getMidpoint();
+
+                // Calcola distanza dal punto medio
+                double distance = Math.sqrt(
+                    (x - midpoint.x) * (x - midpoint.x) +
+                    (y - midpoint.y) * (y - midpoint.y)
+                );
+
+                if (distance < 15) { // Tolleranza di 15 pixel (raggio della pallina + margine)
+                    return conn;
+                }
+            }
+        }
+        return null;
+    }
+
     private double distanceFromLine(int px, int py, int x1, int y1, int x2, int y2) {
         double lineLength = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
         if (lineLength == 0) return Math.sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1));
@@ -149,8 +169,18 @@ public class FlowchartCanvas extends JPanel {
 
     private void handleMouseReleased(MouseEvent e) {
         if (SwingUtilities.isRightMouseButton(e) && connectionSourceBlock != null) {
-            // Completa la connessione
-            Block targetBlock = model.getBlockAt(e.getX(), e.getY());
+            // Controlla se il rilascio è vicino a una pallina (punto medio di una connessione)
+            Connection midpointConnection = getConnectionMidpointAt(e.getX(), e.getY());
+            Block targetBlock = null;
+
+            if (midpointConnection != null) {
+                // Connetti al blocco sorgente della connessione con la pallina
+                targetBlock = midpointConnection.getSourceBlock();
+            } else {
+                // Comportamento normale: connetti a un blocco
+                targetBlock = model.getBlockAt(e.getX(), e.getY());
+            }
+
             if (targetBlock != null && targetBlock != connectionSourceBlock) {
                 // Per blocchi decisionali e cicli, chiedi l'etichetta
                 if (connectionSourceBlock.getType() == BlockType.DECISION) {
@@ -341,13 +371,22 @@ public class FlowchartCanvas extends JPanel {
                 // Disegna la freccia
                 drawArrow(g2d, source, target);
 
-                // Disegna l'etichetta se presente
+                // Disegna la pallina a metà della connessione
+                Point midpoint = conn.getMidpoint();
+                g2d.setColor(new Color(33, 150, 243)); // Blu
+                g2d.fillOval(midpoint.x - 8, midpoint.y - 8, 16, 16); // Cerchio di raggio 8
+                g2d.setColor(Color.WHITE);
+                g2d.setStroke(new BasicStroke(2));
+                g2d.drawOval(midpoint.x - 8, midpoint.y - 8, 16, 16); // Bordo bianco
+                g2d.setStroke(new BasicStroke(1));
+
+                // Disegna l'etichetta se presente (spostata leggermente per non sovrapporsi alla pallina)
                 if (!conn.getLabel().isEmpty()) {
                     int midX = (source.x + target.x) / 2;
                     int midY = (source.y + target.y) / 2;
                     g2d.setColor(Color.RED);
                     g2d.setFont(new Font("Arial", Font.BOLD, 12));
-                    g2d.drawString(conn.getLabel(), midX + 5, midY - 5);
+                    g2d.drawString(conn.getLabel(), midX + 12, midY - 12);
                 }
             }
         }
