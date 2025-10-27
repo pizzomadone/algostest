@@ -123,8 +123,9 @@ public class FlowchartCanvas extends JPanel {
         // Trova la connessione più vicina al punto cliccato
         for (Block block : model.getBlocks()) {
             for (Connection conn : block.getOutgoingConnections()) {
-                Point source = conn.getSourceBlock().getConnectionPoint("bottom");
-                Point target = conn.getTargetBlock().getConnectionPoint("top");
+                // Usa gli stessi metodi di drawConnections per gestire sia blocchi che midpoint
+                Point source = conn.getSourceBlock().getConnectionPoint(conn.getSourceEdge());
+                Point target = conn.getTargetPoint(); // Gestisce sia blocchi che midpoint
 
                 // Calcola la distanza dalla linea
                 double distance = distanceFromLine(x, y, source.x, source.y, target.x, target.y);
