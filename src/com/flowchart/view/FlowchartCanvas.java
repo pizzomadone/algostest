@@ -17,6 +17,7 @@ public class FlowchartCanvas extends JPanel {
     private Block connectionSourceBlock;
     private Point currentMousePos;
     private String connectionLabel = "";
+    private Connection selectedConnection;
 
     public FlowchartCanvas(FlowchartModel model) {
         this.model = model;
@@ -24,6 +25,31 @@ public class FlowchartCanvas extends JPanel {
         setPreferredSize(new Dimension(800, 600));
 
         setupMouseListeners();
+        setupKeyListeners();
+    }
+
+    private void setupKeyListeners() {
+        // Aggiungi listener per i tasti
+        setFocusable(true);
+        addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_DELETE || e.getKeyCode() == KeyEvent.VK_BACK_SPACE) {
+                    if (selectedConnection != null) {
+                        // Elimina la connessione selezionata
+                        for (Block block : model.getBlocks()) {
+                            if (block.getOutgoingConnections().remove(selectedConnection)) {
+                                selectedConnection = null;
+                                repaint();
+                                break;
+                            }
+                        }
+                    } else if (selectedBlock != null) {
+                        deleteSelectedBlock();
+                    }
+                }
+            }
+        });
     }
 
     private void setupMouseListeners() {
@@ -73,18 +99,52 @@ public class FlowchartCanvas extends JPanel {
                 currentMousePos = e.getPoint();
             }
         } else if (SwingUtilities.isLeftMouseButton(e)) {
-            // Click sinistro: seleziona e trascina
-            selectedBlock = clickedBlock;
-            if (selectedBlock != null) {
+            // Click sinistro: seleziona blocco o connessione
+            if (clickedBlock != null) {
+                selectedBlock = clickedBlock;
+                selectedConnection = null;
                 draggedBlock = selectedBlock;
                 dragOffset = new Point(
                     e.getX() - selectedBlock.getPosition().x,
                     e.getY() - selectedBlock.getPosition().y
                 );
+            } else {
+                // Se non è un blocco, prova a selezionare una connessione
+                selectedConnection = getConnectionAt(e.getX(), e.getY());
+                selectedBlock = null;
             }
         }
 
+        requestFocusInWindow(); // Necessario per ricevere eventi tastiera
         repaint();
+    }
+
+    private Connection getConnectionAt(int x, int y) {
+        // Trova la connessione più vicina al punto cliccato
+        for (Block block : model.getBlocks()) {
+            for (Connection conn : block.getOutgoingConnections()) {
+                Point source = conn.getSourceBlock().getConnectionPoint("bottom");
+                Point target = conn.getTargetBlock().getConnectionPoint("top");
+
+                // Calcola la distanza dalla linea
+                double distance = distanceFromLine(x, y, source.x, source.y, target.x, target.y);
+                if (distance < 10) { // Tolleranza di 10 pixel
+                    return conn;
+                }
+            }
+        }
+        return null;
+    }
+
+    private double distanceFromLine(int px, int py, int x1, int y1, int x2, int y2) {
+        double lineLength = Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+        if (lineLength == 0) return Math.sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1));
+
+        double t = Math.max(0, Math.min(1, ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / (lineLength * lineLength)));
+        double projX = x1 + t * (x2 - x1);
+        double projY = y1 + t * (y2 - y1);
+
+        return Math.sqrt((px - projX) * (px - projX) + (py - projY) * (py - projY));
     }
 
     private void handleMouseReleased(MouseEvent e) {
@@ -261,13 +321,19 @@ public class FlowchartCanvas extends JPanel {
     }
 
     private void drawConnections(Graphics2D g2d) {
-        g2d.setColor(Color.BLACK);
-        g2d.setStroke(new BasicStroke(2));
-
         for (Block block : model.getBlocks()) {
             for (Connection conn : block.getOutgoingConnections()) {
                 Point source = conn.getSourceBlock().getConnectionPoint("bottom");
                 Point target = conn.getTargetBlock().getConnectionPoint("top");
+
+                // Se la connessione è selezionata, evidenziala
+                if (conn == selectedConnection) {
+                    g2d.setColor(Color.RED);
+                    g2d.setStroke(new BasicStroke(4));
+                } else {
+                    g2d.setColor(Color.BLACK);
+                    g2d.setStroke(new BasicStroke(2));
+                }
 
                 // Disegna la linea
                 g2d.drawLine(source.x, source.y, target.x, target.y);
@@ -282,7 +348,6 @@ public class FlowchartCanvas extends JPanel {
                     g2d.setColor(Color.RED);
                     g2d.setFont(new Font("Arial", Font.BOLD, 12));
                     g2d.drawString(conn.getLabel(), midX + 5, midY - 5);
-                    g2d.setColor(Color.BLACK);
                 }
             }
         }
@@ -373,40 +438,131 @@ public class FlowchartCanvas extends JPanel {
                 g2d.drawPolygon(xPointsIO, yPointsIO, 4);
                 g2d.setStroke(new BasicStroke(1));
 
-                // Disegna icona I o O in alto a sinistra
-                g2d.setFont(new Font("Arial", Font.BOLD, 20));
-                g2d.setColor(new Color(0, 0, 0, 100)); // Semi-trasparente
+                // Disegna icona I o O nella parte destra del parallelogramma
+                g2d.setFont(new Font("Arial", Font.BOLD, 24));
+                g2d.setColor(new Color(255, 255, 255, 180)); // Bianco semi-trasparente
                 String icon = block.getType() == BlockType.INPUT ? "I" : "O";
-                g2d.drawString(icon, pos.x + 8, pos.y + 22);
+                FontMetrics fm = g2d.getFontMetrics();
+                int iconWidth = fm.stringWidth(icon);
+                // Posiziona l'icona in alto a destra
+                g2d.drawString(icon, pos.x + size.width - iconWidth - 20, pos.y + 26);
                 break;
 
             case FOR_LOOP:
-            case WHILE_LOOP:
-            case DO_WHILE_LOOP:
-                // Esagono (forma tipica per cicli)
-                int w = size.width;
-                int h = size.height;
-                int indent = 20;
-                int[] xPointsLoop = {
-                    pos.x + indent,
-                    pos.x + w - indent,
-                    pos.x + w,
-                    pos.x + w - indent,
-                    pos.x + indent,
+                // Esagono con etichetta FOR
+                int wFor = size.width;
+                int hFor = size.height;
+                int indentFor = 20;
+                int[] xPointsFor = {
+                    pos.x + indentFor,
+                    pos.x + wFor - indentFor,
+                    pos.x + wFor,
+                    pos.x + wFor - indentFor,
+                    pos.x + indentFor,
                     pos.x
                 };
-                int[] yPointsLoop = {
+                int[] yPointsFor = {
                     pos.y,
                     pos.y,
-                    pos.y + h / 2,
-                    pos.y + h,
-                    pos.y + h,
-                    pos.y + h / 2
+                    pos.y + hFor / 2,
+                    pos.y + hFor,
+                    pos.y + hFor,
+                    pos.y + hFor / 2
                 };
-                g2d.fillPolygon(xPointsLoop, yPointsLoop, 6);
+                g2d.fillPolygon(xPointsFor, yPointsFor, 6);
                 g2d.setColor(Color.BLACK);
                 g2d.setStroke(new BasicStroke(2));
-                g2d.drawPolygon(xPointsLoop, yPointsLoop, 6);
+                g2d.drawPolygon(xPointsFor, yPointsFor, 6);
+
+                // Etichetta FOR in alto a sinistra
+                g2d.setFont(new Font("Arial", Font.BOLD, 10));
+                g2d.setColor(new Color(255, 255, 255, 200));
+                g2d.drawString("FOR", pos.x + 5, pos.y + 12);
+                g2d.setStroke(new BasicStroke(1));
+                break;
+
+            case WHILE_LOOP:
+                // Esagono con etichetta WHILE
+                int wWhile = size.width;
+                int hWhile = size.height;
+                int indentWhile = 20;
+                int[] xPointsWhile = {
+                    pos.x + indentWhile,
+                    pos.x + wWhile - indentWhile,
+                    pos.x + wWhile,
+                    pos.x + wWhile - indentWhile,
+                    pos.x + indentWhile,
+                    pos.x
+                };
+                int[] yPointsWhile = {
+                    pos.y,
+                    pos.y,
+                    pos.y + hWhile / 2,
+                    pos.y + hWhile,
+                    pos.y + hWhile,
+                    pos.y + hWhile / 2
+                };
+                g2d.fillPolygon(xPointsWhile, yPointsWhile, 6);
+                g2d.setColor(Color.BLACK);
+                g2d.setStroke(new BasicStroke(2));
+                g2d.drawPolygon(xPointsWhile, yPointsWhile, 6);
+
+                // Etichetta WHILE in alto a sinistra
+                g2d.setFont(new Font("Arial", Font.BOLD, 10));
+                g2d.setColor(new Color(255, 255, 255, 200));
+                g2d.drawString("WHILE", pos.x + 5, pos.y + 12);
+
+                // Freccia di ritorno a sinistra per indicare il ciclo
+                g2d.setColor(new Color(255, 255, 255, 150));
+                g2d.setStroke(new BasicStroke(2));
+                // Disegna freccia curva sul lato sinistro
+                g2d.drawArc(pos.x - 15, pos.y + 10, 15, hWhile - 20, 90, 180);
+                // Punta freccia verso l'alto
+                g2d.drawLine(pos.x - 15, pos.y + 15, pos.x - 10, pos.y + 10);
+                g2d.drawLine(pos.x - 15, pos.y + 15, pos.x - 15, pos.y + 20);
+                g2d.setStroke(new BasicStroke(1));
+                break;
+
+            case DO_WHILE_LOOP:
+                // Esagono con doppia linea in basso per distinguerlo
+                int wDo = size.width;
+                int hDo = size.height;
+                int indentDo = 20;
+                int[] xPointsDo = {
+                    pos.x + indentDo,
+                    pos.x + wDo - indentDo,
+                    pos.x + wDo,
+                    pos.x + wDo - indentDo,
+                    pos.x + indentDo,
+                    pos.x
+                };
+                int[] yPointsDo = {
+                    pos.y,
+                    pos.y,
+                    pos.y + hDo / 2,
+                    pos.y + hDo,
+                    pos.y + hDo,
+                    pos.y + hDo / 2
+                };
+                g2d.fillPolygon(xPointsDo, yPointsDo, 6);
+                g2d.setColor(Color.BLACK);
+                g2d.setStroke(new BasicStroke(2));
+                g2d.drawPolygon(xPointsDo, yPointsDo, 6);
+
+                // Doppia linea in basso per distinguere DO-WHILE
+                g2d.drawLine(pos.x + indentDo, pos.y + hDo - 5, pos.x + wDo - indentDo, pos.y + hDo - 5);
+
+                // Etichetta DO-WHILE in alto a sinistra
+                g2d.setFont(new Font("Arial", Font.BOLD, 9));
+                g2d.setColor(new Color(255, 255, 255, 200));
+                g2d.drawString("DO-WHILE", pos.x + 5, pos.y + 12);
+
+                // Freccia di ritorno a sinistra per indicare il ciclo
+                g2d.setColor(new Color(255, 255, 255, 150));
+                g2d.setStroke(new BasicStroke(2));
+                g2d.drawArc(pos.x - 15, pos.y + 10, 15, hDo - 20, 90, 180);
+                g2d.drawLine(pos.x - 15, pos.y + 15, pos.x - 10, pos.y + 10);
+                g2d.drawLine(pos.x - 15, pos.y + 15, pos.x - 15, pos.y + 20);
                 g2d.setStroke(new BasicStroke(1));
                 break;
 

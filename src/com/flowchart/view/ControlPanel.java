@@ -191,8 +191,10 @@ public class ControlPanel extends JPanel {
             @Override
             public void onExecutionComplete() {
                 appendOutput("\n=== ESECUZIONE COMPLETATA ===\n");
-                stopExecution();
-                clearHighlight();
+                // NON spegnere l'ultimo blocco evidenziato
+                // L'evidenziazione rimane fino a Stop o nuova esecuzione
+                runButton.setEnabled(true);
+                stopButton.setEnabled(false);
             }
 
             @Override
@@ -210,6 +212,9 @@ public class ControlPanel extends JPanel {
     }
 
     private void startExecution(boolean stepByStep) {
+        // Spegni tutti i blocchi evidenziati dall'esecuzione precedente
+        clearHighlight();
+
         runButton.setEnabled(false);
         stopButton.setEnabled(true);
         outputArea.setText("");
@@ -237,7 +242,13 @@ public class ControlPanel extends JPanel {
 
     private void highlightBlock(Block block) {
         SwingUtilities.invokeLater(() -> {
-            clearHighlight();
+            // Spegni solo il blocco precedente, non tutti
+            for (Block b : executor.getModel().getBlocks()) {
+                if (b != block && b.isHighlighted()) {
+                    b.setHighlighted(false);
+                }
+            }
+            // Accendi il blocco corrente
             block.setHighlighted(true);
             canvas.repaint();
         });
