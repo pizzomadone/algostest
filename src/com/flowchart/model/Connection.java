@@ -11,6 +11,7 @@ public class Connection implements Serializable {
 
     private Block sourceBlock;
     private Block targetBlock;
+    private Connection targetMidpointConnection; // Se non null, la connessione punta al midpoint di questa connessione
     private String label; // Per le connessioni condizionali (es: "SI", "NO")
     private String sourceEdge; // Lato da cui esce la connessione: "top", "bottom", "left", "right"
     private String targetEdge; // Lato in cui entra la connessione: "top", "bottom", "left", "right"
@@ -33,6 +34,20 @@ public class Connection implements Serializable {
         this.label = label;
         this.sourceEdge = sourceEdge;
         this.targetEdge = targetEdge;
+    }
+
+    /**
+     * Costruttore per connessioni che puntano al midpoint di un'altra connessione
+     */
+    public Connection(Block sourceBlock, Connection targetMidpoint, String label) {
+        this.sourceBlock = sourceBlock;
+        this.targetMidpointConnection = targetMidpoint;
+        this.targetBlock = null;
+        this.label = label;
+        // Calcola il lato di uscita
+        Point midpoint = targetMidpoint.getMidpoint();
+        this.sourceEdge = calculateBestEdge(sourceBlock, midpoint);
+        this.targetEdge = null; // Non serve per midpoint
     }
 
     /**
@@ -94,13 +109,41 @@ public class Connection implements Serializable {
         return targetEdge;
     }
 
+    public Connection getTargetMidpointConnection() {
+        return targetMidpointConnection;
+    }
+
+    public boolean isTargetingMidpoint() {
+        return targetMidpointConnection != null;
+    }
+
     /**
      * Restituisce il punto medio della connessione (dove disegnare la pallina)
      */
     public Point getMidpoint() {
         Point source = sourceBlock.getConnectionPoint(sourceEdge);
-        Point target = targetBlock.getConnectionPoint(targetEdge);
+        Point target;
+
+        if (isTargetingMidpoint()) {
+            // Se punta a un midpoint, usa quel midpoint come target
+            target = targetMidpointConnection.getMidpoint();
+        } else {
+            // Altrimenti usa il punto di connessione del blocco target
+            target = targetBlock.getConnectionPoint(targetEdge);
+        }
+
         return new Point((source.x + target.x) / 2, (source.y + target.y) / 2);
+    }
+
+    /**
+     * Restituisce il punto finale della connessione (dove termina la freccia)
+     */
+    public Point getTargetPoint() {
+        if (isTargetingMidpoint()) {
+            return targetMidpointConnection.getMidpoint();
+        } else {
+            return targetBlock.getConnectionPoint(targetEdge);
+        }
     }
 
     /**

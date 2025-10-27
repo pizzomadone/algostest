@@ -171,15 +171,19 @@ public class FlowchartCanvas extends JPanel {
         if (SwingUtilities.isRightMouseButton(e) && connectionSourceBlock != null) {
             // Controlla se il rilascio è vicino a una pallina (punto medio di una connessione)
             Connection midpointConnection = getConnectionMidpointAt(e.getX(), e.getY());
-            Block targetBlock = null;
 
             if (midpointConnection != null) {
-                // Connetti al blocco sorgente della connessione con la pallina
-                targetBlock = midpointConnection.getSourceBlock();
-            } else {
-                // Comportamento normale: connetti a un blocco
-                targetBlock = model.getBlockAt(e.getX(), e.getY());
+                // Crea una connessione che punta direttamente al pallino blu (midpoint)
+                Connection connection = new Connection(connectionSourceBlock, midpointConnection, connectionLabel);
+                connectionSourceBlock.addConnection(connection);
+                connectionLabel = "";
+                connectionSourceBlock = null;
+                repaint();
+                return;
             }
+
+            // Comportamento normale: connetti a un blocco
+            Block targetBlock = model.getBlockAt(e.getX(), e.getY());
 
             if (targetBlock != null && targetBlock != connectionSourceBlock) {
                 // Per blocchi decisionali e cicli, chiedi l'etichetta
@@ -376,7 +380,7 @@ public class FlowchartCanvas extends JPanel {
             for (Connection conn : block.getOutgoingConnections()) {
                 // Usa i lati salvati nella connessione
                 Point source = conn.getSourceBlock().getConnectionPoint(conn.getSourceEdge());
-                Point target = conn.getTargetBlock().getConnectionPoint(conn.getTargetEdge());
+                Point target = conn.getTargetPoint(); // Gestisce sia blocchi che midpoint
 
                 // Se la connessione è selezionata, evidenziala
                 if (conn == selectedConnection) {
@@ -393,14 +397,16 @@ public class FlowchartCanvas extends JPanel {
                 // Disegna la freccia
                 drawArrow(g2d, source, target);
 
-                // Disegna la pallina a metà della connessione
-                Point midpoint = conn.getMidpoint();
-                g2d.setColor(new Color(33, 150, 243)); // Blu
-                g2d.fillOval(midpoint.x - 8, midpoint.y - 8, 16, 16); // Cerchio di raggio 8
-                g2d.setColor(Color.WHITE);
-                g2d.setStroke(new BasicStroke(2));
-                g2d.drawOval(midpoint.x - 8, midpoint.y - 8, 16, 16); // Bordo bianco
-                g2d.setStroke(new BasicStroke(1));
+                // Disegna la pallina a metà della connessione solo se NON punta a un midpoint
+                if (!conn.isTargetingMidpoint()) {
+                    Point midpoint = conn.getMidpoint();
+                    g2d.setColor(new Color(33, 150, 243)); // Blu
+                    g2d.fillOval(midpoint.x - 8, midpoint.y - 8, 16, 16); // Cerchio di raggio 8
+                    g2d.setColor(Color.WHITE);
+                    g2d.setStroke(new BasicStroke(2));
+                    g2d.drawOval(midpoint.x - 8, midpoint.y - 8, 16, 16); // Bordo bianco
+                    g2d.setStroke(new BasicStroke(1));
+                }
 
                 // Disegna l'etichetta se presente (spostata leggermente per non sovrapporsi alla pallina)
                 if (!conn.getLabel().isEmpty()) {
