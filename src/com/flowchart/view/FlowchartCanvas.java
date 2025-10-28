@@ -220,12 +220,72 @@ public class FlowchartCanvas extends JPanel {
             Point source = conn.getSourceBlock().getConnectionPoint(conn.getSourceEdge());
             Point target = conn.getTargetBlock().getConnectionPoint(conn.getTargetEdge());
 
-            double distance = distanceFromLine(x, y, source.x, source.y, target.x, target.y);
-            if (distance < 10) {
-                return conn;
+            // Per merge connections, controlla tutti i segmenti del routing Manhattan
+            if (conn.isMergeConnection()) {
+                if (isPointOnMergeConnection(x, y, source, target, conn.getSourceEdge(), conn.getTargetBlock())) {
+                    return conn;
+                }
+            } else {
+                // Per connessioni normali, linea retta
+                double distance = distanceFromLine(x, y, source.x, source.y, target.x, target.y);
+                if (distance < 10) {
+                    return conn;
+                }
             }
         }
         return null;
+    }
+
+    private boolean isPointOnMergeConnection(int px, int py, Point source, Point target, String sourceEdge, Block targetBlock) {
+        int horizontalOffset = 60;
+        boolean isLeftBranch = "left".equals(sourceEdge);
+        boolean isTargetMergePoint = (targetBlock.getType() == BlockType.MERGE);
+
+        if (isLeftBranch) {
+            int leftX = source.x - horizontalOffset;
+
+            if (isTargetMergePoint) {
+                // Tre segmenti: orizzontale → verticale → orizzontale
+                int pallinoCenterX = targetBlock.getPosition().x + targetBlock.getSize().width / 2;
+                int pallinoCenterY = targetBlock.getPosition().y + targetBlock.getSize().height / 2;
+
+                // Segmento 1: orizzontale verso sinistra
+                if (distanceFromLine(px, py, source.x, source.y, leftX, source.y) < 10) return true;
+                // Segmento 2: verticale che scende
+                if (distanceFromLine(px, py, leftX, source.y, leftX, pallinoCenterY) < 10) return true;
+                // Segmento 3: orizzontale verso destra (verso pallino)
+                if (distanceFromLine(px, py, leftX, pallinoCenterY, pallinoCenterX, pallinoCenterY) < 10) return true;
+            } else {
+                // Due segmenti: orizzontale → verticale (fino al blocco)
+                // Segmento 1: orizzontale verso sinistra
+                if (distanceFromLine(px, py, source.x, source.y, leftX, source.y) < 10) return true;
+                // Segmento 2: verticale che scende
+                if (distanceFromLine(px, py, leftX, source.y, leftX, target.y) < 10) return true;
+            }
+        } else {
+            int rightX = source.x + horizontalOffset;
+
+            if (isTargetMergePoint) {
+                // Tre segmenti: orizzontale → verticale → orizzontale
+                int pallinoCenterX = targetBlock.getPosition().x + targetBlock.getSize().width / 2;
+                int pallinoCenterY = targetBlock.getPosition().y + targetBlock.getSize().height / 2;
+
+                // Segmento 1: orizzontale verso destra
+                if (distanceFromLine(px, py, source.x, source.y, rightX, source.y) < 10) return true;
+                // Segmento 2: verticale che scende
+                if (distanceFromLine(px, py, rightX, source.y, rightX, pallinoCenterY) < 10) return true;
+                // Segmento 3: orizzontale verso sinistra (verso pallino)
+                if (distanceFromLine(px, py, rightX, pallinoCenterY, pallinoCenterX, pallinoCenterY) < 10) return true;
+            } else {
+                // Due segmenti: orizzontale → verticale (fino al blocco)
+                // Segmento 1: orizzontale verso destra
+                if (distanceFromLine(px, py, source.x, source.y, rightX, source.y) < 10) return true;
+                // Segmento 2: verticale che scende
+                if (distanceFromLine(px, py, rightX, source.y, rightX, target.y) < 10) return true;
+            }
+        }
+
+        return false;
     }
 
     private double distanceFromLine(int px, int py, int x1, int y1, int x2, int y2) {
