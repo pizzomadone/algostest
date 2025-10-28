@@ -545,18 +545,17 @@ public class FlowchartCanvas extends JPanel {
             case "right":
                 goingBack = target.x < source.x;
                 if (goingBack) {
-                    // Torna indietro: destra -> su/giù -> sinistra -> su/giù -> target
+                    // Torna indietro: destra → su/giù → sinistra → target
                     Point p1 = new Point(source.x + offset, source.y);
-                    int clearanceY = target.y > source.y ? source.y + offset : source.y - offset;
+                    // Sale/scende in base al target, non al source
+                    int clearanceY = target.y < source.y ? target.y - offset : target.y + offset;
                     Point p2 = new Point(p1.x, clearanceY);
-                    Point p3 = new Point(target.x - offset, clearanceY);
-                    Point p4 = new Point(p3.x, target.y);
+                    Point p3 = new Point(target.x, clearanceY);
                     path.add(p1);
                     path.add(p2);
                     path.add(p3);
-                    path.add(p4);
                 } else {
-                    // Va avanti: destra -> su/giù -> target
+                    // Va avanti: destra → target Y → target
                     int midX = source.x + (target.x - source.x) / 2;
                     Point p1 = new Point(midX, source.y);
                     Point p2 = new Point(midX, target.y);
@@ -568,18 +567,16 @@ public class FlowchartCanvas extends JPanel {
             case "left":
                 goingBack = target.x > source.x;
                 if (goingBack) {
-                    // Torna indietro: sinistra -> su/giù -> destra -> su/giù -> target
+                    // Torna indietro: sinistra → su/giù → destra → target
                     Point p1 = new Point(source.x - offset, source.y);
-                    int clearanceY = target.y > source.y ? source.y + offset : source.y - offset;
+                    int clearanceY = target.y < source.y ? target.y - offset : target.y + offset;
                     Point p2 = new Point(p1.x, clearanceY);
-                    Point p3 = new Point(target.x + offset, clearanceY);
-                    Point p4 = new Point(p3.x, target.y);
+                    Point p3 = new Point(target.x, clearanceY);
                     path.add(p1);
                     path.add(p2);
                     path.add(p3);
-                    path.add(p4);
                 } else {
-                    // Va avanti: sinistra -> su/giù -> target
+                    // Va avanti: sinistra → target Y → target
                     int midX = source.x + (target.x - source.x) / 2;
                     Point p1 = new Point(midX, source.y);
                     Point p2 = new Point(midX, target.y);
@@ -591,18 +588,16 @@ public class FlowchartCanvas extends JPanel {
             case "bottom":
                 goingBack = target.y < source.y;
                 if (goingBack) {
-                    // Torna indietro: giù -> sinistra/destra -> su -> sinistra/destra -> target
+                    // Torna indietro: giù → sinistra/destra → su → target
                     Point p1 = new Point(source.x, source.y + offset);
-                    int clearanceX = target.x > source.x ? source.x + offset : source.x - offset;
+                    int clearanceX = target.x < source.x ? target.x - offset : target.x + offset;
                     Point p2 = new Point(clearanceX, p1.y);
-                    Point p3 = new Point(clearanceX, target.y - offset);
-                    Point p4 = new Point(target.x, p3.y);
+                    Point p3 = new Point(clearanceX, target.y);
                     path.add(p1);
                     path.add(p2);
                     path.add(p3);
-                    path.add(p4);
                 } else {
-                    // Va avanti: giù -> sinistra/destra -> target
+                    // Va avanti: giù → target X → target
                     int midY = source.y + (target.y - source.y) / 2;
                     Point p1 = new Point(source.x, midY);
                     Point p2 = new Point(target.x, midY);
@@ -614,18 +609,16 @@ public class FlowchartCanvas extends JPanel {
             case "top":
                 goingBack = target.y > source.y;
                 if (goingBack) {
-                    // Torna indietro: su -> sinistra/destra -> giù -> sinistra/destra -> target
+                    // Torna indietro: su → sinistra/destra → giù → target
                     Point p1 = new Point(source.x, source.y - offset);
-                    int clearanceX = target.x > source.x ? source.x + offset : source.x - offset;
+                    int clearanceX = target.x < source.x ? target.x - offset : target.x + offset;
                     Point p2 = new Point(clearanceX, p1.y);
-                    Point p3 = new Point(clearanceX, target.y + offset);
-                    Point p4 = new Point(target.x, p3.y);
+                    Point p3 = new Point(clearanceX, target.y);
                     path.add(p1);
                     path.add(p2);
                     path.add(p3);
-                    path.add(p4);
                 } else {
-                    // Va avanti: su -> sinistra/destra -> target
+                    // Va avanti: su → target X → target
                     int midY = source.y + (target.y - source.y) / 2;
                     Point p1 = new Point(source.x, midY);
                     Point p2 = new Point(target.x, midY);
