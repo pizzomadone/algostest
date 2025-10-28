@@ -223,7 +223,42 @@ public class FlowchartTree {
         }
         visited.add(block);
 
+        // I MERGE points non vengono riposizionati dal layout automatico
+        // Mantengono la posizione manuale impostata quando sono stati creati
+        if (block.getType() == BlockType.MERGE) {
+            // Continua il layout per i blocchi successivi senza spostare questo
+            List<Connection> outgoing = block.getOutgoingConnections();
+            if (!outgoing.isEmpty()) {
+                Connection conn = outgoing.get(0);
+                Block target = conn.getTargetBlock();
+                if (target != null && !visited.contains(target)) {
+                    // Continua dal merge point con Y dopo il merge
+                    int mergeY = block.getPosition().y;
+                    return layoutBlockRecursive(target, x, mergeY + VERTICAL_SPACING, depth, visited);
+                }
+            }
+            return block.getPosition().y;
+        }
+
         block.setPosition(new Point(x, y));
+
+        // Se è un blocco DECISION, posiziona manualmente il merge point sotto di esso
+        if (block.getType() == BlockType.DECISION) {
+            // Trova il merge point collegato
+            for (Connection conn : block.getOutgoingConnections()) {
+                Block target = conn.getTargetBlock();
+                if (target != null && target.getType() == BlockType.MERGE) {
+                    // Posiziona il merge point centrato sotto il rombo
+                    // Vertice inferiore del rombo: (x + 60, y + 60)
+                    // Centro del pallino deve essere a (x + 60, ...)
+                    // Posizione pallino (angolo) = (x + 50, y + 60 + gap)
+                    int pallinoX = x + 50;
+                    int pallinoY = y + 60 + 20; // 20 pixel sotto il vertice inferiore
+                    target.setPosition(new Point(pallinoX, pallinoY));
+                    break;
+                }
+            }
+        }
 
         List<Connection> outgoing = block.getOutgoingConnections();
         if (outgoing.isEmpty()) {
@@ -250,7 +285,7 @@ public class FlowchartTree {
             return layoutBlockRecursive(conn.getTargetBlock(), x, nextY, depth, visited);
         }
 
-        // Se ha più connessioni forward (ramificazione)
+        // Se ha più connessioni forward (ramificazione - blocco decision)
         int currentX = x - (forwardConnections.size() - 1) * HORIZONTAL_SPACING / 2;
         int maxY = nextY;
 
