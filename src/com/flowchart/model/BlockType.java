@@ -12,7 +12,9 @@ public enum BlockType {
     OUTPUT("Output", "#4A148C"),
     FOR_LOOP("Ciclo FOR", "#00838F"),
     WHILE_LOOP("Ciclo WHILE", "#00695C"),
-    DO_WHILE_LOOP("Ciclo DO-WHILE", "#004D40");
+    DO_WHILE_LOOP("Ciclo DO-WHILE", "#004D40"),
+    MERGE("Merge", "#FFFFFF"),
+    LOOP_BODY("Corpo Ciclo", "#009688");
 
     private final String displayName;
     private final String color;

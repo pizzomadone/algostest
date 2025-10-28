@@ -37,13 +37,82 @@ public class FlowchartTree {
         Block sourceBlock = conn.getSourceBlock();
         Block targetBlock = conn.getTargetBlock();
 
+        // Rimuove la vecchia connessione
+        sourceBlock.getOutgoingConnections().remove(conn);
+
         // Crea nuovo blocco a metà tra source e target
         int midX = (sourceBlock.getPosition().x + targetBlock.getPosition().x) / 2;
         int midY = (sourceBlock.getPosition().y + targetBlock.getPosition().y) / 2;
-        Block newBlock = new Block(type, text, new Point(midX, midY));
 
-        // Rimuove la vecchia connessione
-        sourceBlock.getOutgoingConnections().remove(conn);
+        // Gestione speciale per cicli (WHILE, FOR, DO-WHILE)
+        if (type == BlockType.WHILE_LOOP || type == BlockType.FOR_LOOP || type == BlockType.DO_WHILE_LOOP) {
+            Block loopBlock = new Block(type, text, new Point(midX, midY));
+            Block bodyBlock = new Block(BlockType.LOOP_BODY, "corpo", new Point(midX, midY + VERTICAL_SPACING));
+
+            // Connessioni per il ciclo:
+            // source → loopBlock
+            Connection toLoop = new Connection(sourceBlock, loopBlock, "");
+            sourceBlock.addConnection(toLoop);
+
+            // loopBlock → bodyBlock (SI - entra nel corpo)
+            Connection toBody = new Connection(loopBlock, bodyBlock, "SI");
+            loopBlock.addConnection(toBody);
+
+            // bodyBlock → loopBlock (freccia di ritorno)
+            Connection backToLoop = new Connection(bodyBlock, loopBlock, "");
+            bodyBlock.addConnection(backToLoop);
+
+            // loopBlock → targetBlock (NO - esce dal ciclo)
+            Connection exitLoop = new Connection(loopBlock, targetBlock, "NO");
+            loopBlock.addConnection(exitLoop);
+
+            recalculateLayout();
+            return loopBlock;
+        }
+
+        // Gestione speciale per decisioni (IF)
+        if (type == BlockType.DECISION) {
+            Block decisionBlock = new Block(type, text, new Point(midX, midY));
+
+            // Crea blocchi placeholder per i rami SI e NO
+            Block siBranch = new Block(BlockType.PROCESS, "ramo SI", new Point(midX - HORIZONTAL_SPACING / 2, midY + VERTICAL_SPACING));
+            Block noBranch = new Block(BlockType.PROCESS, "ramo NO", new Point(midX + HORIZONTAL_SPACING / 2, midY + VERTICAL_SPACING));
+
+            // Crea punto di merge invisibile
+            Block mergePoint = new Block(BlockType.MERGE, "merge", new Point(midX, midY + VERTICAL_SPACING * 2));
+            mergePoint.setVisible(false);
+
+            // Connessioni:
+            // source → decision
+            Connection toDecision = new Connection(sourceBlock, decisionBlock, "");
+            sourceBlock.addConnection(toDecision);
+
+            // decision → siBranch (SI)
+            Connection toSi = new Connection(decisionBlock, siBranch, "SI");
+            decisionBlock.addConnection(toSi);
+
+            // decision → noBranch (NO)
+            Connection toNo = new Connection(decisionBlock, noBranch, "NO");
+            decisionBlock.addConnection(toNo);
+
+            // siBranch → merge
+            Connection siToMerge = new Connection(siBranch, mergePoint, "");
+            siBranch.addConnection(siToMerge);
+
+            // noBranch → merge
+            Connection noToMerge = new Connection(noBranch, mergePoint, "");
+            noBranch.addConnection(noToMerge);
+
+            // merge → target
+            Connection mergeToTarget = new Connection(mergePoint, targetBlock, "");
+            mergePoint.addConnection(mergeToTarget);
+
+            recalculateLayout();
+            return decisionBlock;
+        }
+
+        // Caso normale: inserimento semplice
+        Block newBlock = new Block(type, text, new Point(midX, midY));
 
         // Crea nuove connessioni: source → nuovo → target
         Connection conn1 = new Connection(sourceBlock, newBlock, "");
@@ -116,7 +185,10 @@ public class FlowchartTree {
         if (blocks.contains(current)) return;
         blocks.add(current);
         for (Connection conn : current.getOutgoingConnections()) {
-            collectBlocksRecursive(conn.getTargetBlock(), blocks);
+            Block target = conn.getTargetBlock();
+            if (target != null && !blocks.contains(target)) {
+                collectBlocksRecursive(target, blocks);
+            }
         }
     }
 
@@ -142,10 +214,17 @@ public class FlowchartTree {
      * Ricalcola il layout di tutti i blocchi
      */
     private void recalculateLayout() {
-        layoutBlockRecursive(root, START_X, START_Y, 0);
+        List<Block> visited = new ArrayList<>();
+        layoutBlockRecursive(root, START_X, START_Y, 0, visited);
     }
 
-    private int layoutBlockRecursive(Block block, int x, int y, int depth) {
+    private int layoutBlockRecursive(Block block, int x, int y, int depth, List<Block> visited) {
+        // Evita cicli infiniti (per le frecce di ritorno dei loop)
+        if (visited.contains(block)) {
+            return y;
+        }
+        visited.add(block);
+
         block.setPosition(new Point(x, y));
 
         List<Connection> outgoing = block.getOutgoingConnections();
@@ -153,20 +232,37 @@ public class FlowchartTree {
             return y;
         }
 
-        int nextY = y + VERTICAL_SPACING;
-
-        // Se ha una sola connessione (flusso lineare)
-        if (outgoing.size() == 1) {
-            Connection conn = outgoing.get(0);
-            return layoutBlockRecursive(conn.getTargetBlock(), x, nextY, depth);
+        // Filtra le connessioni che puntano indietro (loop back arrows)
+        List<Connection> forwardConnections = new ArrayList<>();
+        for (Connection conn : outgoing) {
+            Block target = conn.getTargetBlock();
+            if (target != null) {
+                // Una freccia va "indietro" se il target ha Y minore o uguale al source
+                boolean isBackward = target.getPosition().y <= block.getPosition().y;
+                if (!isBackward) {
+                    forwardConnections.add(conn);
+                }
+            }
         }
 
-        // Se ha più connessioni (ramificazione)
-        int currentX = x - (outgoing.size() - 1) * HORIZONTAL_SPACING / 2;
+        if (forwardConnections.isEmpty()) {
+            return y;
+        }
+
+        int nextY = y + VERTICAL_SPACING;
+
+        // Se ha una sola connessione forward (flusso lineare)
+        if (forwardConnections.size() == 1) {
+            Connection conn = forwardConnections.get(0);
+            return layoutBlockRecursive(conn.getTargetBlock(), x, nextY, depth, visited);
+        }
+
+        // Se ha più connessioni forward (ramificazione)
+        int currentX = x - (forwardConnections.size() - 1) * HORIZONTAL_SPACING / 2;
         int maxY = nextY;
 
-        for (Connection conn : outgoing) {
-            int branchEndY = layoutBlockRecursive(conn.getTargetBlock(), currentX, nextY, depth + 1);
+        for (Connection conn : forwardConnections) {
+            int branchEndY = layoutBlockRecursive(conn.getTargetBlock(), currentX, nextY, depth + 1, visited);
             maxY = Math.max(maxY, branchEndY);
             currentX += HORIZONTAL_SPACING;
         }

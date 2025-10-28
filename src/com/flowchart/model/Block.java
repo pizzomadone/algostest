@@ -19,6 +19,7 @@ public class Block implements Serializable {
     private Dimension size;
     private List<Connection> outgoingConnections;
     private boolean highlighted;
+    private boolean visible;
 
     public Block(BlockType type, String text, Point position) {
         this.id = UUID.randomUUID().toString();
@@ -28,6 +29,7 @@ public class Block implements Serializable {
         this.size = new Dimension(120, 60);
         this.outgoingConnections = new ArrayList<>();
         this.highlighted = false;
+        this.visible = true;
     }
 
     public String getId() {
@@ -80,6 +82,14 @@ public class Block implements Serializable {
 
     public void setHighlighted(boolean highlighted) {
         this.highlighted = highlighted;
+    }
+
+    public boolean isVisible() {
+        return visible;
+    }
+
+    public void setVisible(boolean visible) {
+        this.visible = visible;
     }
 
     public boolean contains(Point point) {

@@ -251,16 +251,21 @@ public class FlowchartCanvas extends JPanel {
         // Disegna connessioni
         drawConnections(g2d);
 
-        // Disegna blocchi
+        // Disegna blocchi (solo quelli visibili)
         for (Block block : tree.getAllBlocks()) {
-            drawBlock(g2d, block);
+            if (block.isVisible()) {
+                drawBlock(g2d, block);
+            }
         }
     }
 
     private void drawConnections(Graphics2D g2d) {
         for (Connection conn : tree.getAllConnections()) {
-            Point source = conn.getSourceBlock().getConnectionPoint(conn.getSourceEdge());
-            Point target = conn.getTargetBlock().getConnectionPoint(conn.getTargetEdge());
+            Block sourceBlock = conn.getSourceBlock();
+            Block targetBlock = conn.getTargetBlock();
+
+            Point source = sourceBlock.getConnectionPoint(conn.getSourceEdge());
+            Point target = targetBlock.getConnectionPoint(conn.getTargetEdge());
 
             // Evidenzia se hover
             if (conn == hoveredConnection) {
@@ -271,19 +276,85 @@ public class FlowchartCanvas extends JPanel {
                 g2d.setStroke(new BasicStroke(2));
             }
 
-            // Disegna linea
-            g2d.drawLine(source.x, source.y, target.x, target.y);
+            // Determina se è una freccia di ritorno (loop back)
+            boolean isBackward = target.y < source.y;
+
+            if (isBackward) {
+                // Usa Manhattan routing per frecce di ritorno
+                drawManhattanConnection(g2d, source, target);
+            } else {
+                // Linea diretta per frecce normali
+                g2d.drawLine(source.x, source.y, target.x, target.y);
+            }
 
             // Disegna freccia
-            drawArrow(g2d, source, target);
+            drawArrow(g2d, source, target, isBackward);
+
+            // Disegna label (SI/NO) se presente
+            String label = conn.getLabel();
+            if (label != null && !label.isEmpty()) {
+                g2d.setFont(new Font("Arial", Font.BOLD, 12));
+                FontMetrics fm = g2d.getFontMetrics();
+                int labelX, labelY;
+
+                if (isBackward) {
+                    // Per frecce di ritorno, posiziona label a destra
+                    labelX = source.x + 80;
+                    labelY = (source.y + target.y) / 2;
+                } else {
+                    // Per frecce normali, posiziona label vicino alla source
+                    labelX = source.x + 10;
+                    labelY = source.y + 20;
+                }
+
+                // Background bianco per leggibilità
+                int labelWidth = fm.stringWidth(label);
+                g2d.setColor(Color.WHITE);
+                g2d.fillRect(labelX - 2, labelY - fm.getAscent(), labelWidth + 4, fm.getHeight());
+
+                // Disegna label
+                g2d.setColor(Color.BLACK);
+                g2d.drawString(label, labelX, labelY);
+            }
 
             g2d.setStroke(new BasicStroke(1));
         }
     }
 
-    private void drawArrow(Graphics2D g2d, Point source, Point target) {
-        double angle = Math.atan2(target.y - source.y, target.x - source.x);
+    private void drawManhattanConnection(Graphics2D g2d, Point source, Point target) {
+        // Manhattan routing per frecce che tornano indietro (loop)
+        int offset = 60; // Quanto spostare a destra
+
+        // 1. Vai verso il basso un po'
+        int midY1 = source.y + 30;
+        g2d.drawLine(source.x, source.y, source.x, midY1);
+
+        // 2. Vai a destra
+        int rightX = source.x + offset;
+        g2d.drawLine(source.x, midY1, rightX, midY1);
+
+        // 3. Vai verso l'alto fino al livello del target
+        int midY2 = target.y - 30;
+        g2d.drawLine(rightX, midY1, rightX, midY2);
+
+        // 4. Vai a sinistra verso il target
+        g2d.drawLine(rightX, midY2, target.x, midY2);
+
+        // 5. Vai verso il target finale
+        g2d.drawLine(target.x, midY2, target.x, target.y);
+    }
+
+    private void drawArrow(Graphics2D g2d, Point source, Point target, boolean isBackward) {
         int arrowSize = 10;
+        double angle;
+
+        if (isBackward) {
+            // Per frecce di ritorno, la punta dell'arco punta verso il basso (dall'alto)
+            angle = Math.PI / 2; // 90 gradi (verso il basso)
+        } else {
+            // Per frecce normali, calcola l'angolo dalla source al target
+            angle = Math.atan2(target.y - source.y, target.x - source.x);
+        }
 
         int x1 = (int) (target.x - arrowSize * Math.cos(angle - Math.PI / 6));
         int y1 = (int) (target.y - arrowSize * Math.sin(angle - Math.PI / 6));
