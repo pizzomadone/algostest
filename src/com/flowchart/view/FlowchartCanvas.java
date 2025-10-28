@@ -222,7 +222,7 @@ public class FlowchartCanvas extends JPanel {
 
             // Per merge connections, controlla tutti i segmenti del routing Manhattan
             if (conn.isMergeConnection()) {
-                if (isPointOnMergeConnection(x, y, source, target, conn.getSourceEdge(), conn.getTargetBlock())) {
+                if (isPointOnMergeConnection(x, y, source, target, conn)) {
                     return conn;
                 }
             } else {
@@ -236,52 +236,66 @@ public class FlowchartCanvas extends JPanel {
         return null;
     }
 
-    private boolean isPointOnMergeConnection(int px, int py, Point source, Point target, String sourceEdge, Block targetBlock) {
+    private boolean isPointOnMergeConnection(int px, int py, Point source, Point target, Connection conn) {
         int horizontalOffset = 60;
-        boolean isLeftBranch = "left".equals(sourceEdge);
-        boolean isTargetMergePoint = (targetBlock.getType() == BlockType.MERGE);
+        String branch = conn.getMergeBranch();
+        boolean isLeftBranch = "left".equals(branch);
+        boolean isTargetMergePoint = (conn.getTargetBlock().getType() == BlockType.MERGE);
+        boolean isSourceDecision = (conn.getSourceBlock().getType() == BlockType.DECISION);
 
         if (isLeftBranch) {
-            int leftX = source.x - horizontalOffset;
+            int leftX = isSourceDecision ? (source.x - horizontalOffset) : source.x;
 
             if (isTargetMergePoint) {
-                // Tre segmenti: orizzontale → verticale → orizzontale
-                int pallinoCenterX = targetBlock.getPosition().x + targetBlock.getSize().width / 2;
-                int pallinoCenterY = targetBlock.getPosition().y + targetBlock.getSize().height / 2;
+                int pallinoCenterX = conn.getTargetBlock().getPosition().x + conn.getTargetBlock().getSize().width / 2;
+                int pallinoCenterY = conn.getTargetBlock().getPosition().y + conn.getTargetBlock().getSize().height / 2;
 
-                // Segmento 1: orizzontale verso sinistra
-                if (distanceFromLine(px, py, source.x, source.y, leftX, source.y) < 10) return true;
-                // Segmento 2: verticale che scende
-                if (distanceFromLine(px, py, leftX, source.y, leftX, pallinoCenterY) < 10) return true;
-                // Segmento 3: orizzontale verso destra (verso pallino)
-                if (distanceFromLine(px, py, leftX, pallinoCenterY, pallinoCenterX, pallinoCenterY) < 10) return true;
+                if (isSourceDecision) {
+                    // Dal rombo: orizzontale → verticale → orizzontale
+                    if (distanceFromLine(px, py, source.x, source.y, leftX, source.y) < 10) return true;
+                    if (distanceFromLine(px, py, leftX, source.y, leftX, pallinoCenterY) < 10) return true;
+                    if (distanceFromLine(px, py, leftX, pallinoCenterY, pallinoCenterX, pallinoCenterY) < 10) return true;
+                } else {
+                    // Da blocco: verticale → orizzontale
+                    if (distanceFromLine(px, py, source.x, source.y, source.x, pallinoCenterY) < 10) return true;
+                    if (distanceFromLine(px, py, source.x, pallinoCenterY, pallinoCenterX, pallinoCenterY) < 10) return true;
+                }
             } else {
-                // Due segmenti: orizzontale → verticale (fino al blocco)
-                // Segmento 1: orizzontale verso sinistra
-                if (distanceFromLine(px, py, source.x, source.y, leftX, source.y) < 10) return true;
-                // Segmento 2: verticale che scende
-                if (distanceFromLine(px, py, leftX, source.y, leftX, target.y) < 10) return true;
+                if (isSourceDecision) {
+                    // Dal rombo: orizzontale → verticale
+                    if (distanceFromLine(px, py, source.x, source.y, leftX, source.y) < 10) return true;
+                    if (distanceFromLine(px, py, leftX, source.y, leftX, target.y) < 10) return true;
+                } else {
+                    // Da blocco: solo verticale
+                    if (distanceFromLine(px, py, source.x, source.y, source.x, target.y) < 10) return true;
+                }
             }
         } else {
-            int rightX = source.x + horizontalOffset;
+            int rightX = isSourceDecision ? (source.x + horizontalOffset) : source.x;
 
             if (isTargetMergePoint) {
-                // Tre segmenti: orizzontale → verticale → orizzontale
-                int pallinoCenterX = targetBlock.getPosition().x + targetBlock.getSize().width / 2;
-                int pallinoCenterY = targetBlock.getPosition().y + targetBlock.getSize().height / 2;
+                int pallinoCenterX = conn.getTargetBlock().getPosition().x + conn.getTargetBlock().getSize().width / 2;
+                int pallinoCenterY = conn.getTargetBlock().getPosition().y + conn.getTargetBlock().getSize().height / 2;
 
-                // Segmento 1: orizzontale verso destra
-                if (distanceFromLine(px, py, source.x, source.y, rightX, source.y) < 10) return true;
-                // Segmento 2: verticale che scende
-                if (distanceFromLine(px, py, rightX, source.y, rightX, pallinoCenterY) < 10) return true;
-                // Segmento 3: orizzontale verso sinistra (verso pallino)
-                if (distanceFromLine(px, py, rightX, pallinoCenterY, pallinoCenterX, pallinoCenterY) < 10) return true;
+                if (isSourceDecision) {
+                    // Dal rombo: orizzontale → verticale → orizzontale
+                    if (distanceFromLine(px, py, source.x, source.y, rightX, source.y) < 10) return true;
+                    if (distanceFromLine(px, py, rightX, source.y, rightX, pallinoCenterY) < 10) return true;
+                    if (distanceFromLine(px, py, rightX, pallinoCenterY, pallinoCenterX, pallinoCenterY) < 10) return true;
+                } else {
+                    // Da blocco: verticale → orizzontale
+                    if (distanceFromLine(px, py, source.x, source.y, source.x, pallinoCenterY) < 10) return true;
+                    if (distanceFromLine(px, py, source.x, pallinoCenterY, pallinoCenterX, pallinoCenterY) < 10) return true;
+                }
             } else {
-                // Due segmenti: orizzontale → verticale (fino al blocco)
-                // Segmento 1: orizzontale verso destra
-                if (distanceFromLine(px, py, source.x, source.y, rightX, source.y) < 10) return true;
-                // Segmento 2: verticale che scende
-                if (distanceFromLine(px, py, rightX, source.y, rightX, target.y) < 10) return true;
+                if (isSourceDecision) {
+                    // Dal rombo: orizzontale → verticale
+                    if (distanceFromLine(px, py, source.x, source.y, rightX, source.y) < 10) return true;
+                    if (distanceFromLine(px, py, rightX, source.y, rightX, target.y) < 10) return true;
+                } else {
+                    // Da blocco: solo verticale
+                    if (distanceFromLine(px, py, source.x, source.y, source.x, target.y) < 10) return true;
+                }
             }
         }
 
@@ -346,7 +360,7 @@ public class FlowchartCanvas extends JPanel {
                 drawArrow(g2d, source, target, true);
             } else if (isMerge) {
                 // Usa Manhattan routing per frecce verso merge point
-                drawMergeConnection(g2d, source, target, sourceBlock, targetBlock, conn.getSourceEdge());
+                drawMergeConnection(g2d, source, target, sourceBlock, targetBlock, conn.getMergeBranch());
                 drawArrow(g2d, source, target, false);
             } else {
                 // Linea diretta per frecce normali
@@ -408,61 +422,95 @@ public class FlowchartCanvas extends JPanel {
         g2d.drawLine(target.x, midY2, target.x, target.y);
     }
 
-    private void drawMergeConnection(Graphics2D g2d, Point source, Point target, Block sourceBlock, Block targetBlock, String sourceEdge) {
+    private void drawMergeConnection(Graphics2D g2d, Point source, Point target, Block sourceBlock, Block targetBlock, String branch) {
         // Manhattan routing per connessioni del blocco decisionale
         // Gestisce sia connessioni complete (rombo → pallino) che parziali (rombo → blocco → pallino)
+        // branch indica "left" o "right" per sapere in quale ramo del decision siamo
 
         int horizontalOffset = 60; // Quanto andare lateralmente prima di scendere
 
-        // Determina quale ramo è basandosi sul sourceEdge
-        boolean isLeftBranch = "left".equals(sourceEdge);
+        // Determina quale ramo è
+        boolean isLeftBranch = "left".equals(branch);
 
         // Determina se il target è il pallino finale o un blocco intermedio
         boolean isTargetMergePoint = (targetBlock.getType() == BlockType.MERGE);
 
+        // Determina se il source è il rombo o un blocco intermedio
+        boolean isSourceDecision = (sourceBlock.getType() == BlockType.DECISION);
+
         if (isLeftBranch) {
             // RAMO SINISTRO (SI)
-            int leftX = source.x - horizontalOffset;
+            int leftX = isSourceDecision ? (source.x - horizontalOffset) : source.x;
 
             if (isTargetMergePoint) {
-                // Connessione completa o seconda parte: va fino al centro del pallino
+                // Va fino al centro del pallino
                 int pallinoCenterX = targetBlock.getPosition().x + targetBlock.getSize().width / 2;
                 int pallinoCenterY = targetBlock.getPosition().y + targetBlock.getSize().height / 2;
 
-                // 1. Va verso SINISTRA
-                g2d.drawLine(source.x, source.y, leftX, source.y);
-                // 2. Scende
-                g2d.drawLine(leftX, source.y, leftX, pallinoCenterY);
-                // 3. Rientra a DESTRA verso il pallino
-                g2d.drawLine(leftX, pallinoCenterY, pallinoCenterX, pallinoCenterY);
+                if (isSourceDecision) {
+                    // Dal rombo: orizzontale → verticale → orizzontale
+                    // 1. Va verso SINISTRA
+                    g2d.drawLine(source.x, source.y, leftX, source.y);
+                    // 2. Scende
+                    g2d.drawLine(leftX, source.y, leftX, pallinoCenterY);
+                    // 3. Rientra a DESTRA verso il pallino
+                    g2d.drawLine(leftX, pallinoCenterY, pallinoCenterX, pallinoCenterY);
+                } else {
+                    // Da blocco intermedio: verticale → orizzontale
+                    // 1. Scende sulla stessa X
+                    g2d.drawLine(source.x, source.y, source.x, pallinoCenterY);
+                    // 2. Rientra a DESTRA verso il pallino
+                    g2d.drawLine(source.x, pallinoCenterY, pallinoCenterX, pallinoCenterY);
+                }
             } else {
-                // Prima parte: va solo fino al blocco intermedio
-                // 1. Va verso SINISTRA
-                g2d.drawLine(source.x, source.y, leftX, source.y);
-                // 2. Scende fino al top del blocco target
-                g2d.drawLine(leftX, source.y, leftX, target.y);
+                // Va solo fino al blocco intermedio
+                if (isSourceDecision) {
+                    // Dal rombo: orizzontale → verticale
+                    // 1. Va verso SINISTRA
+                    g2d.drawLine(source.x, source.y, leftX, source.y);
+                    // 2. Scende fino al top del blocco target
+                    g2d.drawLine(leftX, source.y, leftX, target.y);
+                } else {
+                    // Da blocco intermedio: solo verticale
+                    g2d.drawLine(source.x, source.y, source.x, target.y);
+                }
             }
         } else {
             // RAMO DESTRO (NO)
-            int rightX = source.x + horizontalOffset;
+            int rightX = isSourceDecision ? (source.x + horizontalOffset) : source.x;
 
             if (isTargetMergePoint) {
-                // Connessione completa o seconda parte: va fino al centro del pallino
+                // Va fino al centro del pallino
                 int pallinoCenterX = targetBlock.getPosition().x + targetBlock.getSize().width / 2;
                 int pallinoCenterY = targetBlock.getPosition().y + targetBlock.getSize().height / 2;
 
-                // 1. Va verso DESTRA
-                g2d.drawLine(source.x, source.y, rightX, source.y);
-                // 2. Scende
-                g2d.drawLine(rightX, source.y, rightX, pallinoCenterY);
-                // 3. Rientra a SINISTRA verso il pallino
-                g2d.drawLine(rightX, pallinoCenterY, pallinoCenterX, pallinoCenterY);
+                if (isSourceDecision) {
+                    // Dal rombo: orizzontale → verticale → orizzontale
+                    // 1. Va verso DESTRA
+                    g2d.drawLine(source.x, source.y, rightX, source.y);
+                    // 2. Scende
+                    g2d.drawLine(rightX, source.y, rightX, pallinoCenterY);
+                    // 3. Rientra a SINISTRA verso il pallino
+                    g2d.drawLine(rightX, pallinoCenterY, pallinoCenterX, pallinoCenterY);
+                } else {
+                    // Da blocco intermedio: verticale → orizzontale
+                    // 1. Scende sulla stessa X
+                    g2d.drawLine(source.x, source.y, source.x, pallinoCenterY);
+                    // 2. Rientra a SINISTRA verso il pallino
+                    g2d.drawLine(source.x, pallinoCenterY, pallinoCenterX, pallinoCenterY);
+                }
             } else {
-                // Prima parte: va solo fino al blocco intermedio
-                // 1. Va verso DESTRA
-                g2d.drawLine(source.x, source.y, rightX, source.y);
-                // 2. Scende fino al top del blocco target
-                g2d.drawLine(rightX, source.y, rightX, target.y);
+                // Va solo fino al blocco intermedio
+                if (isSourceDecision) {
+                    // Dal rombo: orizzontale → verticale
+                    // 1. Va verso DESTRA
+                    g2d.drawLine(source.x, source.y, rightX, source.y);
+                    // 2. Scende fino al top del blocco target
+                    g2d.drawLine(rightX, source.y, rightX, target.y);
+                } else {
+                    // Da blocco intermedio: solo verticale
+                    g2d.drawLine(source.x, source.y, source.x, target.y);
+                }
             }
         }
     }

@@ -42,13 +42,19 @@ public class FlowchartTree {
 
         // GESTIONE SPECIALE per MERGE connections (archi del blocco decisionale)
         if (conn.isMergeConnection()) {
+            // Determina in quale ramo siamo (preserva dall'originale o usa sourceEdge)
+            String branch = conn.getMergeBranch();
+            if (branch == null) {
+                branch = "left".equals(conn.getSourceEdge()) ? "left" : "right";
+            }
+
             // Inserisco il blocco sul segmento verticale
-            // Calcolo posizione X sulla linea verticale (dipende da sourceEdge)
+            // Calcolo posizione X sulla linea verticale (dipende dal ramo)
             int blockX;
             Point sourcePos = sourceBlock.getPosition();
             int horizontalOffset = 60;
 
-            if ("left".equals(conn.getSourceEdge())) {
+            if ("left".equals(branch)) {
                 // Ramo sinistro: X è a sinistra del rombo
                 blockX = sourcePos.x + 60 - horizontalOffset - 60; // Centro blocco sulla linea verticale sinistra
             } else {
@@ -61,15 +67,17 @@ public class FlowchartTree {
 
             Block newBlock = new Block(type, text, new Point(blockX, blockY));
 
-            // Ricrea le connessioni mantenendo il routing Manhattan
-            // source (rombo) → newBlock
+            // Ricrea le connessioni mantenendo il routing Manhattan E il ramo
+            // source (rombo o blocco precedente) → newBlock
             Connection conn1 = new Connection(sourceBlock, newBlock, conn.getLabel(), conn.getSourceEdge(), "top");
             conn1.setMergeConnection(true);
+            conn1.setMergeBranch(branch); // Propaga il ramo
             sourceBlock.addConnection(conn1);
 
-            // newBlock → target (pallino)
+            // newBlock → target (pallino o prossimo blocco)
             Connection conn2 = new Connection(newBlock, targetBlock, "", "bottom", conn.getTargetEdge());
             conn2.setMergeConnection(true);
+            conn2.setMergeBranch(branch); // Propaga il ramo
             newBlock.addConnection(conn2);
 
             recalculateLayout();
@@ -129,12 +137,14 @@ public class FlowchartTree {
             // Routing: sinistra → giù → destra → pallino
             Connection siToMerge = new Connection(decisionBlock, mergePoint, "SI", "left", "left");
             siToMerge.setMergeConnection(true);
+            siToMerge.setMergeBranch("left"); // Ramo sinistro
             decisionBlock.addConnection(siToMerge);
 
             // decision → merge (NO - esce dal vertice DESTRO)
             // Routing: destra → giù → sinistra → pallino
             Connection noToMerge = new Connection(decisionBlock, mergePoint, "NO", "right", "right");
             noToMerge.setMergeConnection(true);
+            noToMerge.setMergeBranch("right"); // Ramo destro
             decisionBlock.addConnection(noToMerge);
 
             // merge → target (dal basso del pallino verso l'alto del target)
