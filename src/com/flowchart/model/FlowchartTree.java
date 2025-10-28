@@ -74,32 +74,34 @@ public class FlowchartTree {
         if (type == BlockType.DECISION) {
             Block decisionBlock = new Block(type, text, new Point(midX, midY));
 
-            // Crea punto di merge VISIBILE come pallino - CENTRATO SOTTO il rombo
-            // Il rombo ha dimensione 120x60, quindi centro a (midX + 60, midY + 30)
-            // Pallino di 20x20 deve avere centro a (midX + 60, ...)
-            // Posizione pallino (angolo alto-sinistra) = (midX + 60 - 10, ...) = (midX + 50, ...)
-            int pallinoX = midX + 50; // Centra il pallino rispetto al rombo
+            // Calcola posizione del pallino: CENTRATO sotto il rombo
+            // Rombo: posizione (midX, midY), dimensione 120x60
+            // Centro del rombo: (midX + 60, midY + 30)
+            // Pallino: dimensione 20x20, deve avere centro uguale al centro X del rombo
+            // Quindi pallino.x = midX + 60 - 10 = midX + 50
+            int pallinoX = midX + 50;
             int pallinoY = midY + VERTICAL_SPACING;
             Block mergePoint = new Block(BlockType.MERGE, "", new Point(pallinoX, pallinoY));
-            mergePoint.setSize(new java.awt.Dimension(20, 20)); // Pallino piccolo
+            mergePoint.setSize(new java.awt.Dimension(20, 20));
             mergePoint.setVisible(true);
 
-            // Connessioni:
             // source → decision
             Connection toDecision = new Connection(sourceBlock, decisionBlock, "");
             sourceBlock.addConnection(toDecision);
 
-            // decision → merge (SI - esce dal vertice SINISTRO del rombo)
-            Connection siToMerge = new Connection(decisionBlock, mergePoint, "SI", "left", "top");
+            // decision → merge (SI - esce dal vertice SINISTRO)
+            // Routing: sinistra → giù → destra → pallino
+            Connection siToMerge = new Connection(decisionBlock, mergePoint, "SI", "left", "left");
             siToMerge.setMergeConnection(true);
             decisionBlock.addConnection(siToMerge);
 
-            // decision → merge (NO - esce dal vertice DESTRO del rombo)
-            Connection noToMerge = new Connection(decisionBlock, mergePoint, "NO", "right", "top");
+            // decision → merge (NO - esce dal vertice DESTRO)
+            // Routing: destra → giù → sinistra → pallino
+            Connection noToMerge = new Connection(decisionBlock, mergePoint, "NO", "right", "right");
             noToMerge.setMergeConnection(true);
             decisionBlock.addConnection(noToMerge);
 
-            // merge → target (freccia esce dal BASSO del pallino e va in ALTO del target)
+            // merge → target (dal basso del pallino verso l'alto del target)
             Connection mergeToTarget = new Connection(mergePoint, targetBlock, "", "bottom", "top");
             mergePoint.addConnection(mergeToTarget);
 

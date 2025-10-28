@@ -349,34 +349,40 @@ public class FlowchartCanvas extends JPanel {
     }
 
     private void drawMergeConnection(Graphics2D g2d, Point source, Point target, Block sourceBlock, Block targetBlock) {
-        // Manhattan routing per frecce che vanno dal rombo al pallino
-        int offset = 60; // Distanza orizzontale per il routing
+        // Manhattan routing a forma di U: dal vertice del rombo al pallino
+        // Le frecce escono lateralmente, scendono, e convergono al centro nel pallino
 
-        // Determina se esce dal vertice sinistro o destro
-        boolean isLeft = source.x < target.x;
+        int horizontalOffset = 60; // Quanto andare lateralmente prima di scendere
 
-        if (isLeft) {
-            // VERTICE SINISTRO: va a sinistra, scende, poi va a destra verso il pallino
-            // 1. Vai orizzontalmente a sinistra
-            int leftX = source.x - offset;
+        // Determina se questa è la freccia sinistra o destra guardando la posizione
+        boolean isLeftBranch = source.x < target.x;
+
+        // Calcola il centro del pallino (target è l'angolo, devo andare al centro)
+        int pallinoCenterX = target.x + 10; // pallino è 20x20, centro a +10
+        int pallinoCenterY = target.y + 10;
+
+        if (isLeftBranch) {
+            // RAMO SINISTRO: vertice sinistro → sinistra → giù → destra → pallino
+            // 1. Va verso SINISTRA
+            int leftX = source.x - horizontalOffset;
             g2d.drawLine(source.x, source.y, leftX, source.y);
 
-            // 2. Scendi verticalmente (90 gradi)
-            g2d.drawLine(leftX, source.y, leftX, target.y);
+            // 2. Scende a 90 gradi
+            g2d.drawLine(leftX, source.y, leftX, pallinoCenterY);
 
-            // 3. Vai orizzontalmente a destra verso il pallino (90 gradi)
-            g2d.drawLine(leftX, target.y, target.x, target.y);
+            // 3. Torna a DESTRA verso il pallino (gira a 90 gradi verso l'interno)
+            g2d.drawLine(leftX, pallinoCenterY, pallinoCenterX, pallinoCenterY);
         } else {
-            // VERTICE DESTRO: va a destra, scende, poi va a sinistra verso il pallino
-            // 1. Vai orizzontalmente a destra
-            int rightX = source.x + offset;
+            // RAMO DESTRO: vertice destro → destra → giù → sinistra → pallino
+            // 1. Va verso DESTRA
+            int rightX = source.x + horizontalOffset;
             g2d.drawLine(source.x, source.y, rightX, source.y);
 
-            // 2. Scendi verticalmente (90 gradi)
-            g2d.drawLine(rightX, source.y, rightX, target.y);
+            // 2. Scende a 90 gradi
+            g2d.drawLine(rightX, source.y, rightX, pallinoCenterY);
 
-            // 3. Vai orizzontalmente a sinistra verso il pallino (90 gradi)
-            g2d.drawLine(rightX, target.y, target.x, target.y);
+            // 3. Torna a SINISTRA verso il pallino (gira a 90 gradi verso l'interno)
+            g2d.drawLine(rightX, pallinoCenterY, pallinoCenterX, pallinoCenterY);
         }
     }
 
