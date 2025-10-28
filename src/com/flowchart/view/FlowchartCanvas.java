@@ -511,7 +511,29 @@ public class FlowchartCanvas extends JPanel {
             return source;
         }
 
-        // Calcola l'angolo di inclinazione
+        // Determina se sta tornando indietro
+        boolean goingBack = false;
+        switch (sourceEdge) {
+            case "right":
+                goingBack = target.x < source.x;
+                break;
+            case "left":
+                goingBack = target.x > source.x;
+                break;
+            case "bottom":
+                goingBack = target.y < source.y;
+                break;
+            case "top":
+                goingBack = target.y > source.y;
+                break;
+        }
+
+        // Se sta tornando indietro, usa SEMPRE manhattan
+        if (goingBack) {
+            return drawManhattanPath(g2d, source, target, sourceEdge);
+        }
+
+        // Altrimenti, controlla l'angolo per decidere
         double angle = Math.abs(Math.atan2(dy, dx));
         double angleDegrees = Math.toDegrees(angle);
 
