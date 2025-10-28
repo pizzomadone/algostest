@@ -349,33 +349,33 @@ public class FlowchartCanvas extends JPanel {
     }
 
     private void drawMergeConnection(Graphics2D g2d, Point source, Point target, Block sourceBlock, Block targetBlock) {
-        // Manhattan routing per frecce che vanno verso il merge point (pallino)
-        int offset = 40; // Distanza orizzontale per il routing
+        // Manhattan routing per frecce che vanno dal rombo al pallino
+        int offset = 60; // Distanza orizzontale per il routing
 
-        // Determina se il source è a sinistra o destra del target
+        // Determina se esce dal vertice sinistro o destro
         boolean isLeft = source.x < target.x;
 
         if (isLeft) {
-            // RAMO SINISTRO: esci a sinistra, scendi, poi vai a destra verso il pallino
-            // 1. Vai a sinistra
+            // VERTICE SINISTRO: va a sinistra, scende, poi va a destra verso il pallino
+            // 1. Vai orizzontalmente a sinistra
             int leftX = source.x - offset;
             g2d.drawLine(source.x, source.y, leftX, source.y);
 
-            // 2. Scendi fino all'altezza del pallino
+            // 2. Scendi verticalmente (90 gradi)
             g2d.drawLine(leftX, source.y, leftX, target.y);
 
-            // 3. Vai a destra verso il pallino
+            // 3. Vai orizzontalmente a destra verso il pallino (90 gradi)
             g2d.drawLine(leftX, target.y, target.x, target.y);
         } else {
-            // RAMO DESTRO: esci a destra, scendi, poi vai a sinistra verso il pallino
-            // 1. Vai a destra
+            // VERTICE DESTRO: va a destra, scende, poi va a sinistra verso il pallino
+            // 1. Vai orizzontalmente a destra
             int rightX = source.x + offset;
             g2d.drawLine(source.x, source.y, rightX, source.y);
 
-            // 2. Scendi fino all'altezza del pallino
+            // 2. Scendi verticalmente (90 gradi)
             g2d.drawLine(rightX, source.y, rightX, target.y);
 
-            // 3. Vai a sinistra verso il pallino
+            // 3. Vai orizzontalmente a sinistra verso il pallino (90 gradi)
             g2d.drawLine(rightX, target.y, target.x, target.y);
         }
     }
