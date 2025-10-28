@@ -5,6 +5,8 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Canvas per disegnare e gestire il diagramma a blocchi
@@ -427,14 +429,17 @@ public class FlowchartCanvas extends JPanel {
         // Disegna le connessioni
         drawConnections(g2d);
 
-        // Disegna la connessione in corso
+        // Disegna la connessione in corso (con manhattan routing)
         if (connectionSourceBlock != null && currentMousePos != null) {
             g2d.setColor(Color.GRAY);
             g2d.setStroke(new BasicStroke(2, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND, 0, new float[]{5}, 0));
             // Calcola dinamicamente il lato in base alla posizione del mouse
             String sourceEdge = Connection.calculateBestEdge(connectionSourceBlock, currentMousePos);
             Point sourcePoint = connectionSourceBlock.getConnectionPoint(sourceEdge);
-            g2d.drawLine(sourcePoint.x, sourcePoint.y, currentMousePos.x, currentMousePos.y);
+
+            // Usa lo stesso algoritmo manhattan per la preview
+            drawConnectionLine(g2d, sourcePoint, currentMousePos, sourceEdge);
+
             g2d.setStroke(new BasicStroke(1));
         }
 
@@ -461,7 +466,7 @@ public class FlowchartCanvas extends JPanel {
                 }
 
                 // Disegna la linea (manhattan se necessario)
-                Point arrowStart = drawConnectionLine(g2d, source, target);
+                Point arrowStart = drawConnectionLine(g2d, source, target, conn.getSourceEdge());
 
                 // Disegna la freccia
                 drawArrow(g2d, arrowStart, target);
@@ -495,7 +500,7 @@ public class FlowchartCanvas extends JPanel {
      * Disegna la linea di connessione (diretta o manhattan style).
      * Restituisce il punto da cui inizia la freccia (l'ultimo punto prima del target).
      */
-    private Point drawConnectionLine(Graphics2D g2d, Point source, Point target) {
+    private Point drawConnectionLine(Graphics2D g2d, Point source, Point target, String sourceEdge) {
         int dx = target.x - source.x;
         int dy = target.y - source.y;
         double distance = Math.sqrt(dx * dx + dy * dy);
@@ -520,34 +525,127 @@ public class FlowchartCanvas extends JPanel {
             return source;
         }
 
-        // Usa manhattan style: linee ortogonali
-        // Determina se iniziare con segmento orizzontale o verticale in base ai lati
-        boolean startHorizontal = Math.abs(dx) > Math.abs(dy);
+        // Usa manhattan style: linee ortogonali intelligenti
+        return drawManhattanPath(g2d, source, target, sourceEdge);
+    }
 
-        Point mid;
-        if (startHorizontal) {
-            // Vai prima orizzontalmente, poi verticalmente
-            int midX = source.x + dx / 2;
-            mid = new Point(midX, source.y);
-            Point corner = new Point(midX, target.y);
+    /**
+     * Disegna un percorso manhattan intelligente che aggira i blocchi quando necessario
+     */
+    private Point drawManhattanPath(Graphics2D g2d, Point source, Point target, String sourceEdge) {
+        int offset = 40; // Quanto allontanarsi dal blocco prima di curvare
 
-            g2d.drawLine(source.x, source.y, mid.x, mid.y);
-            g2d.drawLine(mid.x, mid.y, corner.x, corner.y);
-            g2d.drawLine(corner.x, corner.y, target.x, target.y);
+        List<Point> path = new ArrayList<>();
+        path.add(source);
 
-            return corner;
-        } else {
-            // Vai prima verticalmente, poi orizzontalmente
-            int midY = source.y + dy / 2;
-            mid = new Point(source.x, midY);
-            Point corner = new Point(target.x, midY);
+        // Determina se sta "tornando indietro" o "andando avanti"
+        boolean goingBack = false;
 
-            g2d.drawLine(source.x, source.y, mid.x, mid.y);
-            g2d.drawLine(mid.x, mid.y, corner.x, corner.y);
-            g2d.drawLine(corner.x, corner.y, target.x, target.y);
+        switch (sourceEdge) {
+            case "right":
+                goingBack = target.x < source.x;
+                if (goingBack) {
+                    // Torna indietro: destra -> su/giù -> sinistra -> su/giù -> target
+                    Point p1 = new Point(source.x + offset, source.y);
+                    int clearanceY = target.y > source.y ? source.y + offset : source.y - offset;
+                    Point p2 = new Point(p1.x, clearanceY);
+                    Point p3 = new Point(target.x - offset, clearanceY);
+                    Point p4 = new Point(p3.x, target.y);
+                    path.add(p1);
+                    path.add(p2);
+                    path.add(p3);
+                    path.add(p4);
+                } else {
+                    // Va avanti: destra -> su/giù -> target
+                    int midX = source.x + (target.x - source.x) / 2;
+                    Point p1 = new Point(midX, source.y);
+                    Point p2 = new Point(midX, target.y);
+                    path.add(p1);
+                    path.add(p2);
+                }
+                break;
 
-            return corner;
+            case "left":
+                goingBack = target.x > source.x;
+                if (goingBack) {
+                    // Torna indietro: sinistra -> su/giù -> destra -> su/giù -> target
+                    Point p1 = new Point(source.x - offset, source.y);
+                    int clearanceY = target.y > source.y ? source.y + offset : source.y - offset;
+                    Point p2 = new Point(p1.x, clearanceY);
+                    Point p3 = new Point(target.x + offset, clearanceY);
+                    Point p4 = new Point(p3.x, target.y);
+                    path.add(p1);
+                    path.add(p2);
+                    path.add(p3);
+                    path.add(p4);
+                } else {
+                    // Va avanti: sinistra -> su/giù -> target
+                    int midX = source.x + (target.x - source.x) / 2;
+                    Point p1 = new Point(midX, source.y);
+                    Point p2 = new Point(midX, target.y);
+                    path.add(p1);
+                    path.add(p2);
+                }
+                break;
+
+            case "bottom":
+                goingBack = target.y < source.y;
+                if (goingBack) {
+                    // Torna indietro: giù -> sinistra/destra -> su -> sinistra/destra -> target
+                    Point p1 = new Point(source.x, source.y + offset);
+                    int clearanceX = target.x > source.x ? source.x + offset : source.x - offset;
+                    Point p2 = new Point(clearanceX, p1.y);
+                    Point p3 = new Point(clearanceX, target.y - offset);
+                    Point p4 = new Point(target.x, p3.y);
+                    path.add(p1);
+                    path.add(p2);
+                    path.add(p3);
+                    path.add(p4);
+                } else {
+                    // Va avanti: giù -> sinistra/destra -> target
+                    int midY = source.y + (target.y - source.y) / 2;
+                    Point p1 = new Point(source.x, midY);
+                    Point p2 = new Point(target.x, midY);
+                    path.add(p1);
+                    path.add(p2);
+                }
+                break;
+
+            case "top":
+                goingBack = target.y > source.y;
+                if (goingBack) {
+                    // Torna indietro: su -> sinistra/destra -> giù -> sinistra/destra -> target
+                    Point p1 = new Point(source.x, source.y - offset);
+                    int clearanceX = target.x > source.x ? source.x + offset : source.x - offset;
+                    Point p2 = new Point(clearanceX, p1.y);
+                    Point p3 = new Point(clearanceX, target.y + offset);
+                    Point p4 = new Point(target.x, p3.y);
+                    path.add(p1);
+                    path.add(p2);
+                    path.add(p3);
+                    path.add(p4);
+                } else {
+                    // Va avanti: su -> sinistra/destra -> target
+                    int midY = source.y + (target.y - source.y) / 2;
+                    Point p1 = new Point(source.x, midY);
+                    Point p2 = new Point(target.x, midY);
+                    path.add(p1);
+                    path.add(p2);
+                }
+                break;
         }
+
+        path.add(target);
+
+        // Disegna il percorso
+        for (int i = 0; i < path.size() - 1; i++) {
+            Point p1 = path.get(i);
+            Point p2 = path.get(i + 1);
+            g2d.drawLine(p1.x, p1.y, p2.x, p2.y);
+        }
+
+        // Restituisce il penultimo punto per la freccia
+        return path.get(path.size() - 2);
     }
 
     private void drawArrow(Graphics2D g2d, Point source, Point target) {
