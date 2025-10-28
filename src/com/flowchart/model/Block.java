@@ -8,6 +8,7 @@ import java.util.UUID;
 
 /**
  * Rappresenta un blocco nel diagramma a blocchi
+ * VERSIONE RISTRUTTURATA: Grafo bidirezionale con incoming e outgoing connections
  */
 public class Block implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -17,9 +18,12 @@ public class Block implements Serializable {
     private String text;
     private Point position;
     private Dimension size;
-    private List<Connection> outgoingConnections;
     private boolean highlighted;
     private boolean visible;
+
+    // GRAFO BIDIREZIONALE: liste separate per IN e OUT
+    private final List<Connection> outgoingConnections;
+    private final List<Connection> incomingConnections;
 
     public Block(BlockType type, String text, Point position) {
         this.id = UUID.randomUUID().toString();
@@ -27,9 +31,70 @@ public class Block implements Serializable {
         this.text = text;
         this.position = position;
         this.size = new Dimension(120, 60);
-        this.outgoingConnections = new ArrayList<>();
         this.highlighted = false;
         this.visible = true;
+        this.outgoingConnections = new ArrayList<>();
+        this.incomingConnections = new ArrayList<>();
+    }
+
+    /**
+     * Aggiunge una connessione in USCITA e aggiorna automaticamente il target
+     */
+    public void addConnection(Connection conn) {
+        if (conn.getSourceBlock() != this) return; // Sicurezza
+
+        if (!outgoingConnections.contains(conn)) {
+            outgoingConnections.add(conn);
+            Block target = conn.getTargetBlock();
+            if (target != null && target != this) {
+                target.addIncomingConnectionInternal(conn);
+            }
+        }
+    }
+
+    /**
+     * Aggiunge una connessione in ENTRATA (uso interno, chiamato da addConnection)
+     */
+    private void addIncomingConnectionInternal(Connection conn) {
+        if (conn.getTargetBlock() != this) return;
+        if (!incomingConnections.contains(conn)) {
+            incomingConnections.add(conn);
+        }
+    }
+
+    /**
+     * Rimuove una connessione in USCITA e aggiorna automaticamente il target
+     */
+    public void removeConnection(Connection conn) {
+        if (outgoingConnections.remove(conn)) {
+            Block target = conn.getTargetBlock();
+            if (target != null && target != this) {
+                target.removeIncomingConnectionInternal(conn);
+            }
+        }
+    }
+
+    /**
+     * Rimuove una connessione in ENTRATA (uso interno)
+     */
+    private void removeIncomingConnectionInternal(Connection conn) {
+        incomingConnections.remove(conn);
+    }
+
+    /**
+     * Pulisce tutte le connessioni del blocco
+     */
+    public void clearConnections() {
+        // Copia per evitare ConcurrentModificationException
+        new ArrayList<>(outgoingConnections).forEach(this::removeConnection);
+        new ArrayList<>(incomingConnections).forEach(conn -> {
+            Block source = conn.getSourceBlock();
+            if (source != null && source != this) {
+                source.removeConnection(conn);
+            }
+        });
+        outgoingConnections.clear();
+        incomingConnections.clear();
     }
 
     public String getId() {
@@ -68,12 +133,8 @@ public class Block implements Serializable {
         return outgoingConnections;
     }
 
-    public void addConnection(Connection connection) {
-        outgoingConnections.add(connection);
-    }
-
-    public void removeConnection(Connection connection) {
-        outgoingConnections.remove(connection);
+    public List<Connection> getIncomingConnections() {
+        return incomingConnections;
     }
 
     public boolean isHighlighted() {

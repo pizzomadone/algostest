@@ -37,8 +37,8 @@ public class FlowchartTree {
         Block sourceBlock = conn.getSourceBlock();
         Block targetBlock = conn.getTargetBlock();
 
-        // Rimuove la vecchia connessione
-        sourceBlock.getOutgoingConnections().remove(conn);
+        // Rimuove la vecchia connessione usando il metodo corretto
+        sourceBlock.removeConnection(conn);
 
         // GESTIONE SPECIALE per MERGE connections (archi del blocco decisionale)
         if (conn.isMergeConnection()) {
@@ -172,48 +172,113 @@ public class FlowchartTree {
 
     /**
      * Rimuove un blocco e riconnette i blocchi circostanti
+     * Usa la struttura bidirezionale per trovare parent e child in modo efficiente
      */
     public void removeBlock(Block block) {
         if (block.getType() == BlockType.START || block.getType() == BlockType.END) {
             return; // Non rimuovere START o END
         }
 
-        // Trova chi punta a questo blocco
-        Block parent = findParent(block);
-        if (parent == null) return;
-
-        // Trova dove punta questo blocco
-        if (block.getOutgoingConnections().isEmpty()) return;
-        Block child = block.getOutgoingConnections().get(0).getTargetBlock();
-
-        // Rimuovi le vecchie connessioni
-        parent.getOutgoingConnections().removeIf(c -> c.getTargetBlock() == block);
-        block.getOutgoingConnections().clear();
-
-        // Riconnetti parent → child
-        Connection newConn = new Connection(parent, child, "");
-        parent.addConnection(newConn);
-
-        // Ricalcola layout
-        recalculateLayout();
-    }
-
-    /**
-     * Trova il blocco parent che punta a questo blocco
-     */
-    private Block findParent(Block target) {
-        return findParentRecursive(root, target);
-    }
-
-    private Block findParentRecursive(Block current, Block target) {
-        for (Connection conn : current.getOutgoingConnections()) {
-            if (conn.getTargetBlock() == target) {
-                return current;
-            }
-            Block found = findParentRecursive(conn.getTargetBlock(), target);
-            if (found != null) return found;
+        // Blocchi strutturali (DECISION, MERGE, LOOP_BODY) non possono essere rimossi singolarmente
+        if (block.getType() == BlockType.MERGE || block.getType() == BlockType.LOOP_BODY) {
+            return;
         }
-        return null;
+
+        // Usa la struttura bidirezionale: trova chi punta a questo blocco
+        List<Connection> incomingConns = block.getIncomingConnections();
+        List<Connection> outgoingConns = block.getOutgoingConnections();
+
+        // Caso standard: 1 IN e 1 OUT
+        if (incomingConns.size() == 1 && outgoingConns.size() == 1) {
+            Connection inConn = incomingConns.get(0);
+            Connection outConn = outgoingConns.get(0);
+
+            Block parent = inConn.getSourceBlock();
+            Block child = outConn.getTargetBlock();
+
+            // Rimuovi le vecchie connessioni usando il metodo corretto
+            parent.removeConnection(inConn);
+            block.removeConnection(outConn);
+
+            // Crea la nuova connessione ereditando TUTTE le proprietà dalla connessione in ingresso
+            Connection newConn = new Connection(parent, child, inConn.getLabel(),
+                                                inConn.getSourceEdge(), outConn.getTargetEdge());
+
+            // CRITICAL: Eredita le proprietà del ramo per preservare la struttura
+            newConn.setMergeConnection(inConn.isMergeConnection());
+            newConn.setMergeBranch(inConn.getMergeBranch());
+            newConn.setBackwardConnection(inConn.isBackwardConnection());
+
+            parent.addConnection(newConn);
+
+            // Ricalcola layout
+            recalculateLayout();
+            return;
+        }
+
+        // Caso DECISION: ha 0 IN e 2 OUT (rimuovi tutto il blocco decisionale)
+        if (block.getType() == BlockType.DECISION) {
+            // Trova il merge point
+            Block mergePoint = findMergePointFromDecision(block);
+            if (mergePoint == null) return;
+
+            // Trova il blocco che viene dopo il merge point
+            if (mergePoint.getOutgoingConnections().isEmpty()) return;
+            Block afterMerge = mergePoint.getOutgoingConnections().get(0).getTargetBlock();
+
+            // Trova chi punta al decision block
+            if (incomingConns.isEmpty()) return;
+            Connection inConn = incomingConns.get(0);
+            Block parent = inConn.getSourceBlock();
+
+            // Pulisci tutte le connessioni del decision e del merge
+            block.clearConnections();
+            mergePoint.clearConnections();
+
+            // Riconnetti parent direttamente ad afterMerge
+            Connection newConn = new Connection(parent, afterMerge, "");
+            parent.addConnection(newConn);
+
+            recalculateLayout();
+            return;
+        }
+
+        // Caso ciclo: rimuovi tutto il blocco ciclo
+        if (block.getType() == BlockType.WHILE_LOOP ||
+            block.getType() == BlockType.FOR_LOOP ||
+            block.getType() == BlockType.DO_WHILE_LOOP) {
+
+            // Trova il corpo del ciclo
+            Block bodyBlock = null;
+            Block exitBlock = null;
+
+            for (Connection conn : outgoingConns) {
+                if (conn.getTargetBlock().getType() == BlockType.LOOP_BODY) {
+                    bodyBlock = conn.getTargetBlock();
+                } else if (!conn.isBackwardConnection()) {
+                    exitBlock = conn.getTargetBlock();
+                }
+            }
+
+            if (exitBlock == null) return;
+
+            // Trova il parent
+            if (incomingConns.isEmpty()) return;
+            Connection inConn = incomingConns.get(0);
+            Block parent = inConn.getSourceBlock();
+
+            // Pulisci le connessioni
+            block.clearConnections();
+            if (bodyBlock != null) {
+                bodyBlock.clearConnections();
+            }
+
+            // Riconnetti parent direttamente a exitBlock
+            Connection newConn = new Connection(parent, exitBlock, "");
+            parent.addConnection(newConn);
+
+            recalculateLayout();
+        }
     }
 
     /**
