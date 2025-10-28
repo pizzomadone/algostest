@@ -15,15 +15,21 @@ public class Connection implements Serializable {
     private String label; // Per le connessioni condizionali (es: "SI", "NO")
     private String sourceEdge; // Lato da cui esce la connessione: "top", "bottom", "left", "right"
     private String targetEdge; // Lato in cui entra la connessione: "top", "bottom", "left", "right"
+    private boolean isBackwardConnection; // True per frecce di ritorno dei loop
 
     public Connection(Block sourceBlock, Block targetBlock) {
         this(sourceBlock, targetBlock, "");
     }
 
     public Connection(Block sourceBlock, Block targetBlock, String label) {
+        this(sourceBlock, targetBlock, label, false);
+    }
+
+    public Connection(Block sourceBlock, Block targetBlock, String label, boolean isBackwardConnection) {
         this.sourceBlock = sourceBlock;
         this.targetBlock = targetBlock;
         this.label = label;
+        this.isBackwardConnection = isBackwardConnection;
         // Calcola automaticamente i lati migliori
         calculateBestEdges();
     }
@@ -115,6 +121,14 @@ public class Connection implements Serializable {
 
     public boolean isTargetingMidpoint() {
         return targetMidpointConnection != null;
+    }
+
+    public boolean isBackwardConnection() {
+        return isBackwardConnection;
+    }
+
+    public void setBackwardConnection(boolean backward) {
+        this.isBackwardConnection = backward;
     }
 
     /**

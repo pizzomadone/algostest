@@ -55,11 +55,11 @@ public class FlowchartTree {
             sourceBlock.addConnection(toLoop);
 
             // loopBlock → bodyBlock (SI - entra nel corpo)
-            Connection toBody = new Connection(loopBlock, bodyBlock, "SI");
+            Connection toBody = new Connection(loopBlock, bodyBlock, "SI", false);
             loopBlock.addConnection(toBody);
 
-            // bodyBlock → loopBlock (freccia di ritorno)
-            Connection backToLoop = new Connection(bodyBlock, loopBlock, "");
+            // bodyBlock → loopBlock (freccia di ritorno) - MARCATA COME BACKWARD
+            Connection backToLoop = new Connection(bodyBlock, loopBlock, "", true);
             bodyBlock.addConnection(backToLoop);
 
             // loopBlock → targetBlock (NO - esce dal ciclo)
@@ -232,16 +232,11 @@ public class FlowchartTree {
             return y;
         }
 
-        // Filtra le connessioni che puntano indietro (loop back arrows)
+        // Filtra le connessioni backward (frecce di ritorno dei loop)
         List<Connection> forwardConnections = new ArrayList<>();
         for (Connection conn : outgoing) {
-            Block target = conn.getTargetBlock();
-            if (target != null) {
-                // Una freccia va "indietro" se il target ha Y minore o uguale al source
-                boolean isBackward = target.getPosition().y <= block.getPosition().y;
-                if (!isBackward) {
-                    forwardConnections.add(conn);
-                }
+            if (!conn.isBackwardConnection() && conn.getTargetBlock() != null) {
+                forwardConnections.add(conn);
             }
         }
 

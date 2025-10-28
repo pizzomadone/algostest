@@ -277,7 +277,7 @@ public class FlowchartCanvas extends JPanel {
             }
 
             // Determina se è una freccia di ritorno (loop back)
-            boolean isBackward = target.y < source.y;
+            boolean isBackward = conn.isBackwardConnection();
 
             if (isBackward) {
                 // Usa Manhattan routing per frecce di ritorno
