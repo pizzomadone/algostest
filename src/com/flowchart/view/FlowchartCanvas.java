@@ -286,7 +286,7 @@ public class FlowchartCanvas extends JPanel {
                 drawArrow(g2d, source, target, true);
             } else if (isMerge) {
                 // Usa Manhattan routing per frecce verso merge point
-                drawMergeConnection(g2d, source, target, sourceBlock, targetBlock);
+                drawMergeConnection(g2d, source, target, sourceBlock, targetBlock, conn.getSourceEdge());
                 drawArrow(g2d, source, target, false);
             } else {
                 // Linea diretta per frecce normali
@@ -348,21 +348,21 @@ public class FlowchartCanvas extends JPanel {
         g2d.drawLine(target.x, midY2, target.x, target.y);
     }
 
-    private void drawMergeConnection(Graphics2D g2d, Point source, Point target, Block sourceBlock, Block targetBlock) {
+    private void drawMergeConnection(Graphics2D g2d, Point source, Point target, Block sourceBlock, Block targetBlock, String sourceEdge) {
         // Manhattan routing a forma di U: dal vertice del rombo al pallino
         // Le frecce escono lateralmente, scendono, e convergono al centro nel pallino
 
         int horizontalOffset = 60; // Quanto andare lateralmente prima di scendere
 
-        // Determina se questa è la freccia sinistra o destra guardando la posizione
-        boolean isLeftBranch = source.x < target.x;
+        // Determina quale ramo è basandosi sul sourceEdge (più affidabile)
+        boolean isLeftBranch = "left".equals(sourceEdge);
 
-        // Calcola il centro del pallino (target è l'angolo, devo andare al centro)
-        int pallinoCenterX = target.x + 10; // pallino è 20x20, centro a +10
-        int pallinoCenterY = target.y + 10;
+        // Calcola il centro del pallino
+        int pallinoCenterX = targetBlock.getPosition().x + targetBlock.getSize().width / 2;
+        int pallinoCenterY = targetBlock.getPosition().y + targetBlock.getSize().height / 2;
 
         if (isLeftBranch) {
-            // RAMO SINISTRO: vertice sinistro → sinistra → giù → destra → pallino
+            // RAMO SINISTRO (SI): vertice sinistro → sinistra → giù → destra → pallino
             // 1. Va verso SINISTRA
             int leftX = source.x - horizontalOffset;
             g2d.drawLine(source.x, source.y, leftX, source.y);
@@ -373,7 +373,7 @@ public class FlowchartCanvas extends JPanel {
             // 3. Torna a DESTRA verso il pallino (gira a 90 gradi verso l'interno)
             g2d.drawLine(leftX, pallinoCenterY, pallinoCenterX, pallinoCenterY);
         } else {
-            // RAMO DESTRO: vertice destro → destra → giù → sinistra → pallino
+            // RAMO DESTRO (NO): vertice destro → destra → giù → sinistra → pallino
             // 1. Va verso DESTRA
             int rightX = source.x + horizontalOffset;
             g2d.drawLine(source.x, source.y, rightX, source.y);
