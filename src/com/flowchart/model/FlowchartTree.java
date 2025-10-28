@@ -74,33 +74,36 @@ public class FlowchartTree {
         if (type == BlockType.DECISION) {
             Block decisionBlock = new Block(type, text, new Point(midX, midY));
 
-            // Crea blocchi placeholder per i rami SI e NO
+            // Crea blocchi placeholder per i rami SI (sinistra) e NO (destra)
             Block siBranch = new Block(BlockType.PROCESS, "ramo SI", new Point(midX - HORIZONTAL_SPACING / 2, midY + VERTICAL_SPACING));
             Block noBranch = new Block(BlockType.PROCESS, "ramo NO", new Point(midX + HORIZONTAL_SPACING / 2, midY + VERTICAL_SPACING));
 
-            // Crea punto di merge invisibile
-            Block mergePoint = new Block(BlockType.MERGE, "merge", new Point(midX, midY + VERTICAL_SPACING * 2));
-            mergePoint.setVisible(false);
+            // Crea punto di merge VISIBILE come pallino
+            Block mergePoint = new Block(BlockType.MERGE, "", new Point(midX, midY + VERTICAL_SPACING * 2));
+            mergePoint.setSize(new java.awt.Dimension(20, 20)); // Pallino piccolo
+            mergePoint.setVisible(true);
 
             // Connessioni:
             // source → decision
             Connection toDecision = new Connection(sourceBlock, decisionBlock, "");
             sourceBlock.addConnection(toDecision);
 
-            // decision → siBranch (SI)
-            Connection toSi = new Connection(decisionBlock, siBranch, "SI");
+            // decision → siBranch (SI - esce dal vertice sinistro usando sourceEdge="left")
+            Connection toSi = new Connection(decisionBlock, siBranch, "SI", "left", "top");
             decisionBlock.addConnection(toSi);
 
-            // decision → noBranch (NO)
-            Connection toNo = new Connection(decisionBlock, noBranch, "NO");
+            // decision → noBranch (NO - esce dal vertice destro usando sourceEdge="right")
+            Connection toNo = new Connection(decisionBlock, noBranch, "NO", "right", "top");
             decisionBlock.addConnection(toNo);
 
-            // siBranch → merge
+            // siBranch → merge (routing Manhattan verso sinistra)
             Connection siToMerge = new Connection(siBranch, mergePoint, "");
+            siToMerge.setMergeConnection(true);
             siBranch.addConnection(siToMerge);
 
-            // noBranch → merge
+            // noBranch → merge (routing Manhattan verso destra)
             Connection noToMerge = new Connection(noBranch, mergePoint, "");
+            noToMerge.setMergeConnection(true);
             noBranch.addConnection(noToMerge);
 
             // merge → target

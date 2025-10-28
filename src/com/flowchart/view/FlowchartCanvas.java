@@ -276,19 +276,23 @@ public class FlowchartCanvas extends JPanel {
                 g2d.setStroke(new BasicStroke(2));
             }
 
-            // Determina se è una freccia di ritorno (loop back)
+            // Determina il tipo di connessione
             boolean isBackward = conn.isBackwardConnection();
+            boolean isMerge = conn.isMergeConnection();
 
             if (isBackward) {
-                // Usa Manhattan routing per frecce di ritorno
+                // Usa Manhattan routing per frecce di ritorno (loop)
                 drawManhattanConnection(g2d, source, target);
+                drawArrow(g2d, source, target, true);
+            } else if (isMerge) {
+                // Usa Manhattan routing per frecce verso merge point
+                drawMergeConnection(g2d, source, target, sourceBlock, targetBlock);
+                drawArrow(g2d, source, target, false);
             } else {
                 // Linea diretta per frecce normali
                 g2d.drawLine(source.x, source.y, target.x, target.y);
+                drawArrow(g2d, source, target, false);
             }
-
-            // Disegna freccia
-            drawArrow(g2d, source, target, isBackward);
 
             // Disegna label (SI/NO) se presente
             String label = conn.getLabel();
@@ -342,6 +346,38 @@ public class FlowchartCanvas extends JPanel {
 
         // 5. Vai verso il target finale
         g2d.drawLine(target.x, midY2, target.x, target.y);
+    }
+
+    private void drawMergeConnection(Graphics2D g2d, Point source, Point target, Block sourceBlock, Block targetBlock) {
+        // Manhattan routing per frecce che vanno verso il merge point (pallino)
+        int offset = 40; // Distanza orizzontale per il routing
+
+        // Determina se il source è a sinistra o destra del target
+        boolean isLeft = source.x < target.x;
+
+        if (isLeft) {
+            // RAMO SINISTRO: esci a sinistra, scendi, poi vai a destra verso il pallino
+            // 1. Vai a sinistra
+            int leftX = source.x - offset;
+            g2d.drawLine(source.x, source.y, leftX, source.y);
+
+            // 2. Scendi fino all'altezza del pallino
+            g2d.drawLine(leftX, source.y, leftX, target.y);
+
+            // 3. Vai a destra verso il pallino
+            g2d.drawLine(leftX, target.y, target.x, target.y);
+        } else {
+            // RAMO DESTRO: esci a destra, scendi, poi vai a sinistra verso il pallino
+            // 1. Vai a destra
+            int rightX = source.x + offset;
+            g2d.drawLine(source.x, source.y, rightX, source.y);
+
+            // 2. Scendi fino all'altezza del pallino
+            g2d.drawLine(rightX, source.y, rightX, target.y);
+
+            // 3. Vai a sinistra verso il pallino
+            g2d.drawLine(rightX, target.y, target.x, target.y);
+        }
     }
 
     private void drawArrow(Graphics2D g2d, Point source, Point target, boolean isBackward) {
@@ -401,6 +437,15 @@ public class FlowchartCanvas extends JPanel {
                 g2d.setColor(Color.BLACK);
                 g2d.drawPolygon(xParallel, yParallel, 4);
                 break;
+            case MERGE:
+                // Disegna un pallino blu per il merge point
+                g2d.setColor(new Color(0, 120, 215));
+                g2d.fillOval(pos.x, pos.y, size.width, size.height);
+                g2d.setColor(Color.BLACK);
+                g2d.setStroke(new BasicStroke(2));
+                g2d.drawOval(pos.x, pos.y, size.width, size.height);
+                g2d.setStroke(new BasicStroke(1));
+                return; // Non disegnare testo per i pallini merge
             default:
                 g2d.fillRect(pos.x, pos.y, size.width, size.height);
                 g2d.setColor(Color.BLACK);

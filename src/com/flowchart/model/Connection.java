@@ -16,6 +16,7 @@ public class Connection implements Serializable {
     private String sourceEdge; // Lato da cui esce la connessione: "top", "bottom", "left", "right"
     private String targetEdge; // Lato in cui entra la connessione: "top", "bottom", "left", "right"
     private boolean isBackwardConnection; // True per frecce di ritorno dei loop
+    private boolean isMergeConnection; // True per frecce che vanno verso un merge point
 
     public Connection(Block sourceBlock, Block targetBlock) {
         this(sourceBlock, targetBlock, "");
@@ -129,6 +130,14 @@ public class Connection implements Serializable {
 
     public void setBackwardConnection(boolean backward) {
         this.isBackwardConnection = backward;
+    }
+
+    public boolean isMergeConnection() {
+        return isMergeConnection;
+    }
+
+    public void setMergeConnection(boolean merge) {
+        this.isMergeConnection = merge;
     }
 
     /**
