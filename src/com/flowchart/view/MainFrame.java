@@ -6,17 +6,16 @@ import javax.swing.*;
 import java.awt.*;
 
 /**
- * Finestra principale dell'applicazione
+ * Finestra principale con nuovo sistema di layout verticale
  */
 public class MainFrame extends JFrame {
     private FlowchartModel model;
     private FlowchartCanvas canvas;
-    private BlockPalette palette;
     private ControlPanel controlPanel;
     private FlowchartExecutor executor;
 
     public MainFrame() {
-        setTitle("Editor Diagrammi a Blocchi");
+        setTitle("Editor Diagrammi a Blocchi - Versione 2.0");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1200, 800);
         setLocationRelativeTo(null);
@@ -31,7 +30,7 @@ public class MainFrame extends JFrame {
         // Inizializza il modello
         model = new FlowchartModel();
 
-        // Inizializza il canvas
+        // Inizializza il canvas con nuovo sistema
         canvas = new FlowchartCanvas(model);
         JScrollPane canvasScroll = new JScrollPane(canvas);
         canvasScroll.setPreferredSize(new Dimension(800, 600));
@@ -39,18 +38,12 @@ public class MainFrame extends JFrame {
         // Inizializza l'executor
         executor = new FlowchartExecutor(model);
 
-        // Inizializza la palette
-        palette = new BlockPalette(canvas);
-
         // Inizializza il pannello di controllo
-        controlPanel = new ControlPanel(executor, canvas);
+        controlPanel = new ControlPanel(executor, canvas, canvas.getTree());
         controlPanel.setPreferredSize(new Dimension(300, 0));
 
         // Layout
         setLayout(new BorderLayout());
-
-        // Pannello sinistro con palette
-        add(palette, BorderLayout.WEST);
 
         // Canvas centrale
         add(canvasScroll, BorderLayout.CENTER);
@@ -68,7 +61,7 @@ public class MainFrame extends JFrame {
         panel.setBorder(BorderFactory.createEtchedBorder());
 
         JLabel infoLabel = new JLabel(
-            "  Click sinistro: seleziona/trascina | Click destro: crea connessione | Doppio click: modifica testo  "
+            "  Click su freccia: inserisci blocco | Doppio click su blocco: modifica testo | Delete: elimina blocco selezionato  "
         );
         infoLabel.setFont(new Font("Arial", Font.PLAIN, 11));
         panel.add(infoLabel);
@@ -124,7 +117,7 @@ public class MainFrame extends JFrame {
         JOptionPane.showMessageDialog(
             this,
             "Editor Diagrammi a Blocchi\n" +
-            "Versione 1.0\n\n" +
+            "Versione 2.0 - Layout Verticale Automatico\n\n" +
             "Un'applicazione per creare ed eseguire\n" +
             "algoritmi con diagrammi a blocchi.\n\n" +
             "© 2024",
@@ -135,24 +128,25 @@ public class MainFrame extends JFrame {
 
     private void showInstructionsDialog() {
         String instructions =
-            "COME USARE L'APPLICAZIONE:\n\n" +
+            "NUOVO SISTEMA - LAYOUT VERTICALE AUTOMATICO:\n\n" +
             "1. CREARE BLOCCHI:\n" +
-            "   - Clicca sui pulsanti nella palette a sinistra\n" +
+            "   - Click su una freccia per inserire un nuovo blocco\n" +
+            "   - Appare un menu con tutti i tipi di blocco disponibili\n" +
+            "   - Il layout si sistema automaticamente\n" +
             "   - I blocchi disponibili sono:\n" +
-            "     * Inizio: punto di partenza dell'algoritmo\n" +
-            "     * Fine: punto di termine dell'algoritmo\n" +
             "     * Processo: esegue operazioni (es: x = 5)\n" +
             "     * Decisione: condizione if (es: x > 0)\n" +
             "     * Input: legge un valore dall'utente\n" +
-            "     * Output: mostra un valore all'utente\n\n" +
+            "     * Output: mostra un valore all'utente\n" +
+            "     * Ciclo FOR/WHILE/DO-WHILE\n\n" +
             "2. MODIFICARE BLOCCHI:\n" +
             "   - Doppio click su un blocco per modificare il testo\n" +
-            "   - Trascina i blocchi per spostarli\n\n" +
-            "3. COLLEGARE BLOCCHI:\n" +
-            "   - Click destro sul blocco sorgente\n" +
-            "   - Trascina fino al blocco destinazione\n" +
-            "   - Rilascia per creare la connessione\n" +
-            "   - Per blocchi Decisione, scegli SI o NO\n\n" +
+            "   - I blocchi si posizionano automaticamente\n\n" +
+            "3. ELIMINARE BLOCCHI:\n" +
+            "   - Click sul blocco per selezionarlo\n" +
+            "   - Premi Delete o Backspace\n" +
+            "   - Il layout si sistema automaticamente\n" +
+            "   - Non puoi eliminare Inizio o Fine\n\n" +
             "4. ESEGUIRE:\n" +
             "   - 'Esegui Tutto': esegue l'intero algoritmo\n" +
             "   - 'Passo-Passo': esegue un blocco alla volta\n" +
@@ -161,11 +155,17 @@ public class MainFrame extends JFrame {
             "   - Processo: x = 10, y = x + 5\n" +
             "   - Decisione: x > 0, y == 5, x != y\n" +
             "   - Input: nome_variabile\n" +
-            "   - Output: variabile o \"testo\"\n\n" +
+            "   - Output: variabile o \"testo\"\n" +
+            "   - Operatori logici: AND, OR\n\n" +
+            "6. ZOOM:\n" +
+            "   - Usa i pulsanti + e - in basso a destra\n" +
+            "   - Oppure Ctrl+Rotella mouse\n\n" +
             "ESEMPI:\n" +
-            "- Somma: Inizio → Input(a) → Input(b) → Processo(c=a+b) → Output(c) → Fine\n" +
-            "- Controllo: Inizio → Input(x) → Decisione(x>0) → [SI]Output(\"Positivo\") → Fine\n" +
-            "                                                  → [NO]Output(\"Negativo\") → Fine";
+            "- Click sulla freccia tra Inizio e Fine\n" +
+            "- Scegli 'Processo' e scrivi: x = 10\n" +
+            "- Click sulla freccia sotto il processo\n" +
+            "- Scegli 'Output' e scrivi: x\n" +
+            "- Esegui per vedere il risultato!";
 
         JTextArea textArea = new JTextArea(instructions);
         textArea.setEditable(false);

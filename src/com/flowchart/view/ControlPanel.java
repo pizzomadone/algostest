@@ -1,17 +1,18 @@
 package com.flowchart.view;
 
 import com.flowchart.executor.FlowchartExecutor;
-import com.flowchart.model.Block;
+import com.flowchart.model.*;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 
 /**
- * Pannello di controllo per l'esecuzione del diagramma
+ * Pannello di controllo semplificato per il nuovo sistema
  */
 public class ControlPanel extends JPanel {
     private FlowchartExecutor executor;
     private FlowchartCanvas canvas;
+    private FlowchartTree tree;
 
     private JButton runButton;
     private JButton stepButton;
@@ -20,9 +21,10 @@ public class ControlPanel extends JPanel {
     private JTable variablesTable;
     private DefaultTableModel tableModel;
 
-    public ControlPanel(FlowchartExecutor executor, FlowchartCanvas canvas) {
+    public ControlPanel(FlowchartExecutor executor, FlowchartCanvas canvas, FlowchartTree tree) {
         this.executor = executor;
         this.canvas = canvas;
+        this.tree = tree;
 
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createTitledBorder("Controlli Esecuzione"));
@@ -35,56 +37,10 @@ public class ControlPanel extends JPanel {
         // Pannello pulsanti
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 
-        runButton = new JButton("Esegui Tutto");
-        Color runColor = new Color(46, 125, 50);
-        runButton.setBackground(runColor);
-        runButton.setForeground(Color.WHITE);
-        runButton.setFocusPainted(false);
-        runButton.setOpaque(true);
-        runButton.setContentAreaFilled(true);
-        runButton.setBorderPainted(false);
-        runButton.setFont(new Font("Arial", Font.BOLD, 12));
-        runButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        runButton.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(runColor.darker(), 2),
-            BorderFactory.createEmptyBorder(5, 10, 5, 10)
-        ));
-        runButton.addChangeListener(e -> {
-            if (runButton.isEnabled()) {
-                if (runButton.getModel().isPressed()) {
-                    runButton.setBackground(runColor.darker());
-                } else if (runButton.getModel().isRollover()) {
-                    runButton.setBackground(runColor.brighter());
-                } else {
-                    runButton.setBackground(runColor);
-                }
-            }
-        });
+        runButton = createStyledButton("Esegui Tutto", new Color(46, 125, 50));
         runButton.addActionListener(e -> startExecution(false));
 
-        stepButton = new JButton("Passo-Passo");
-        Color stepColor = new Color(21, 101, 192);
-        stepButton.setBackground(stepColor);
-        stepButton.setForeground(Color.WHITE);
-        stepButton.setFocusPainted(false);
-        stepButton.setOpaque(true);
-        stepButton.setContentAreaFilled(true);
-        stepButton.setBorderPainted(false);
-        stepButton.setFont(new Font("Arial", Font.BOLD, 12));
-        stepButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        stepButton.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(stepColor.darker(), 2),
-            BorderFactory.createEmptyBorder(5, 10, 5, 10)
-        ));
-        stepButton.addChangeListener(e -> {
-            if (stepButton.getModel().isPressed()) {
-                stepButton.setBackground(stepColor.darker());
-            } else if (stepButton.getModel().isRollover()) {
-                stepButton.setBackground(stepColor.brighter());
-            } else {
-                stepButton.setBackground(stepColor);
-            }
-        });
+        stepButton = createStyledButton("Passo-Passo", new Color(21, 101, 192));
         stepButton.addActionListener(e -> {
             if (!executor.isRunning()) {
                 startExecution(true);
@@ -93,76 +49,21 @@ public class ControlPanel extends JPanel {
             }
         });
 
-        stopButton = new JButton("Stop");
-        Color stopColor = new Color(198, 40, 40);
-        stopButton.setBackground(stopColor);
-        stopButton.setForeground(Color.WHITE);
-        stopButton.setFocusPainted(false);
-        stopButton.setOpaque(true);
-        stopButton.setContentAreaFilled(true);
-        stopButton.setBorderPainted(false);
-        stopButton.setFont(new Font("Arial", Font.BOLD, 12));
-        stopButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        stopButton.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(stopColor.darker(), 2),
-            BorderFactory.createEmptyBorder(5, 10, 5, 10)
-        ));
+        stopButton = createStyledButton("Stop", new Color(198, 40, 40));
         stopButton.setEnabled(false);
-        stopButton.addChangeListener(e -> {
-            if (stopButton.isEnabled()) {
-                if (stopButton.getModel().isPressed()) {
-                    stopButton.setBackground(stopColor.darker());
-                } else if (stopButton.getModel().isRollover()) {
-                    stopButton.setBackground(stopColor.brighter());
-                } else {
-                    stopButton.setBackground(stopColor);
-                }
-            }
-        });
         stopButton.addActionListener(e -> stopExecution());
-
-        JButton clearOutputButton = new JButton("Pulisci Output");
-        Color clearColor = new Color(97, 97, 97);
-        clearOutputButton.setBackground(clearColor);
-        clearOutputButton.setForeground(Color.WHITE);
-        clearOutputButton.setFocusPainted(false);
-        clearOutputButton.setOpaque(true);
-        clearOutputButton.setContentAreaFilled(true);
-        clearOutputButton.setBorderPainted(false);
-        clearOutputButton.setFont(new Font("Arial", Font.BOLD, 11));
-        clearOutputButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        clearOutputButton.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(clearColor.darker(), 2),
-            BorderFactory.createEmptyBorder(3, 8, 3, 8)
-        ));
-        clearOutputButton.addChangeListener(e -> {
-            if (clearOutputButton.getModel().isPressed()) {
-                clearOutputButton.setBackground(clearColor.darker());
-            } else if (clearOutputButton.getModel().isRollover()) {
-                clearOutputButton.setBackground(clearColor.brighter());
-            } else {
-                clearOutputButton.setBackground(clearColor);
-            }
-        });
-        clearOutputButton.addActionListener(e -> outputArea.setText(""));
 
         buttonPanel.add(runButton);
         buttonPanel.add(stepButton);
         buttonPanel.add(stopButton);
-        buttonPanel.add(clearOutputButton);
 
-        add(buttonPanel, BorderLayout.NORTH);
-
-        // Pannello centrale con output e variabili
-        JPanel centerPanel = new JPanel(new GridLayout(2, 1, 5, 5));
-
-        // Area output
+        // Area di output
         outputArea = new JTextArea();
         outputArea.setEditable(false);
         outputArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
         JScrollPane outputScroll = new JScrollPane(outputArea);
-        outputScroll.setBorder(BorderFactory.createTitledBorder("Output Esecuzione"));
-        centerPanel.add(outputScroll);
+        outputScroll.setBorder(BorderFactory.createTitledBorder("Output"));
+        outputScroll.setPreferredSize(new Dimension(280, 200));
 
         // Tabella variabili
         tableModel = new DefaultTableModel(new String[]{"Variabile", "Valore"}, 0) {
@@ -172,36 +73,67 @@ public class ControlPanel extends JPanel {
             }
         };
         variablesTable = new JTable(tableModel);
-        variablesTable.setFont(new Font("Monospaced", Font.PLAIN, 12));
         JScrollPane tableScroll = new JScrollPane(variablesTable);
         tableScroll.setBorder(BorderFactory.createTitledBorder("Variabili"));
-        centerPanel.add(tableScroll);
+        tableScroll.setPreferredSize(new Dimension(280, 200));
 
-        add(centerPanel, BorderLayout.CENTER);
+        // Layout
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.add(buttonPanel, BorderLayout.NORTH);
+        topPanel.add(outputScroll, BorderLayout.CENTER);
+
+        add(topPanel, BorderLayout.NORTH);
+        add(tableScroll, BorderLayout.CENTER);
+    }
+
+    private JButton createStyledButton(String text, Color baseColor) {
+        JButton button = new JButton(text);
+        button.setBackground(baseColor);
+        button.setForeground(Color.WHITE);
+        button.setFocusPainted(false);
+        button.setOpaque(true);
+        button.setContentAreaFilled(true);
+        button.setBorderPainted(false);
+        button.setFont(new Font("Arial", Font.BOLD, 12));
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        button.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(baseColor.darker(), 2),
+            BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
+        return button;
     }
 
     private void setupExecutorListener() {
         executor.setListener(new FlowchartExecutor.ExecutionListener() {
             @Override
             public void onBlockExecuted(Block block, String output) {
-                appendOutput(block.getType().getDisplayName() + ": " + output);
-                highlightBlock(block);
+                if (output != null && !output.isEmpty()) {
+                    outputArea.append(output + "\n");
+                }
+                canvas.repaint();
             }
 
             @Override
             public void onExecutionComplete() {
-                appendOutput("\n=== ESECUZIONE COMPLETATA ===\n");
-                // NON spegnere l'ultimo blocco evidenziato
-                // L'evidenziazione rimane fino a Stop o nuova esecuzione
                 runButton.setEnabled(true);
+                stepButton.setEnabled(true);
                 stopButton.setEnabled(false);
+                outputArea.append("\n=== Esecuzione completata ===\n");
+                canvas.repaint();
             }
 
             @Override
             public void onExecutionError(String error) {
-                appendOutput("ERRORE: " + error);
-                stopExecution();
-                clearHighlight();
+                runButton.setEnabled(true);
+                stepButton.setEnabled(true);
+                stopButton.setEnabled(false);
+                outputArea.append("\nERRORE: " + error + "\n");
+                JOptionPane.showMessageDialog(
+                    ControlPanel.this,
+                    error,
+                    "Errore di Esecuzione",
+                    JOptionPane.ERROR_MESSAGE
+                );
             }
 
             @Override
@@ -212,70 +144,41 @@ public class ControlPanel extends JPanel {
     }
 
     private void startExecution(boolean stepByStep) {
-        // Spegni tutti i blocchi evidenziati dall'esecuzione precedente
-        clearHighlight();
+        // Sincronizza il model con il tree
+        syncModelWithTree();
 
-        runButton.setEnabled(false);
-        stopButton.setEnabled(true);
         outputArea.setText("");
         tableModel.setRowCount(0);
 
-        appendOutput("=== INIZIO ESECUZIONE ===\n");
+        runButton.setEnabled(false);
+        stepButton.setEnabled(stepByStep);
+        stopButton.setEnabled(true);
 
-        // Avvia l'esecuzione in un thread separato per non bloccare l'UI
-        new Thread(() -> executor.startExecution(stepByStep)).start();
+        executor.startExecution(stepByStep);
     }
 
     private void stopExecution() {
         executor.stopExecution();
         runButton.setEnabled(true);
+        stepButton.setEnabled(true);
         stopButton.setEnabled(false);
-        clearHighlight();
+        canvas.repaint();
     }
 
-    private void appendOutput(String text) {
-        SwingUtilities.invokeLater(() -> {
-            outputArea.append(text + "\n");
-            outputArea.setCaretPosition(outputArea.getDocument().getLength());
-        });
-    }
+    private void syncModelWithTree() {
+        // Pulisci il model e aggiungi i blocchi dal tree
+        FlowchartModel model = executor.getModel();
+        model.clear();
 
-    private void highlightBlock(Block block) {
-        SwingUtilities.invokeLater(() -> {
-            // Spegni solo il blocco precedente, non tutti
-            for (Block b : executor.getModel().getBlocks()) {
-                if (b != block && b.isHighlighted()) {
-                    b.setHighlighted(false);
-                }
-            }
-            // Accendi il blocco corrente
-            block.setHighlighted(true);
-            canvas.repaint();
-        });
-    }
-
-    private void clearHighlight() {
-        SwingUtilities.invokeLater(() -> {
-            for (Block block : executor.getModel().getBlocks()) {
-                block.setHighlighted(false);
-            }
-            canvas.repaint();
-        });
+        for (Block block : tree.getAllBlocks()) {
+            model.addBlock(block);
+        }
     }
 
     private void updateVariablesTable() {
-        SwingUtilities.invokeLater(() -> {
-            tableModel.setRowCount(0);
-            executor.getModel().getVariables().forEach((name, value) -> {
-                // Filtra le variabili interne (che iniziano con __)
-                if (!name.startsWith("__")) {
-                    tableModel.addRow(new Object[]{name, value});
-                }
-            });
+        tableModel.setRowCount(0);
+        executor.getModel().getVariables().forEach((name, value) -> {
+            tableModel.addRow(new Object[]{name, value});
         });
-    }
-
-    public FlowchartExecutor getExecutor() {
-        return executor;
     }
 }
