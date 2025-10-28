@@ -349,40 +349,61 @@ public class FlowchartCanvas extends JPanel {
     }
 
     private void drawMergeConnection(Graphics2D g2d, Point source, Point target, Block sourceBlock, Block targetBlock, String sourceEdge) {
-        // Manhattan routing a forma di U: dal vertice del rombo al pallino
-        // Le frecce escono lateralmente, scendono, e convergono al centro nel pallino
+        // Manhattan routing per connessioni del blocco decisionale
+        // Gestisce sia connessioni complete (rombo → pallino) che parziali (rombo → blocco → pallino)
 
         int horizontalOffset = 60; // Quanto andare lateralmente prima di scendere
 
-        // Determina quale ramo è basandosi sul sourceEdge (più affidabile)
+        // Determina quale ramo è basandosi sul sourceEdge
         boolean isLeftBranch = "left".equals(sourceEdge);
 
-        // Calcola il centro del pallino
-        int pallinoCenterX = targetBlock.getPosition().x + targetBlock.getSize().width / 2;
-        int pallinoCenterY = targetBlock.getPosition().y + targetBlock.getSize().height / 2;
+        // Determina se il target è il pallino finale o un blocco intermedio
+        boolean isTargetMergePoint = (targetBlock.getType() == BlockType.MERGE);
 
         if (isLeftBranch) {
-            // RAMO SINISTRO (SI): vertice sinistro → sinistra → giù → destra → pallino
-            // 1. Va verso SINISTRA
+            // RAMO SINISTRO (SI)
             int leftX = source.x - horizontalOffset;
-            g2d.drawLine(source.x, source.y, leftX, source.y);
 
-            // 2. Scende a 90 gradi
-            g2d.drawLine(leftX, source.y, leftX, pallinoCenterY);
+            if (isTargetMergePoint) {
+                // Connessione completa o seconda parte: va fino al centro del pallino
+                int pallinoCenterX = targetBlock.getPosition().x + targetBlock.getSize().width / 2;
+                int pallinoCenterY = targetBlock.getPosition().y + targetBlock.getSize().height / 2;
 
-            // 3. Torna a DESTRA verso il pallino (gira a 90 gradi verso l'interno)
-            g2d.drawLine(leftX, pallinoCenterY, pallinoCenterX, pallinoCenterY);
+                // 1. Va verso SINISTRA
+                g2d.drawLine(source.x, source.y, leftX, source.y);
+                // 2. Scende
+                g2d.drawLine(leftX, source.y, leftX, pallinoCenterY);
+                // 3. Rientra a DESTRA verso il pallino
+                g2d.drawLine(leftX, pallinoCenterY, pallinoCenterX, pallinoCenterY);
+            } else {
+                // Prima parte: va solo fino al blocco intermedio
+                // 1. Va verso SINISTRA
+                g2d.drawLine(source.x, source.y, leftX, source.y);
+                // 2. Scende fino al top del blocco target
+                g2d.drawLine(leftX, source.y, leftX, target.y);
+            }
         } else {
-            // RAMO DESTRO (NO): vertice destro → destra → giù → sinistra → pallino
-            // 1. Va verso DESTRA
+            // RAMO DESTRO (NO)
             int rightX = source.x + horizontalOffset;
-            g2d.drawLine(source.x, source.y, rightX, source.y);
 
-            // 2. Scende a 90 gradi
-            g2d.drawLine(rightX, source.y, rightX, pallinoCenterY);
+            if (isTargetMergePoint) {
+                // Connessione completa o seconda parte: va fino al centro del pallino
+                int pallinoCenterX = targetBlock.getPosition().x + targetBlock.getSize().width / 2;
+                int pallinoCenterY = targetBlock.getPosition().y + targetBlock.getSize().height / 2;
 
-            // 3. Torna a SINISTRA verso il pallino (gira a 90 gradi verso l'interno)
-            g2d.drawLine(rightX, pallinoCenterY, pallinoCenterX, pallinoCenterY);
+                // 1. Va verso DESTRA
+                g2d.drawLine(source.x, source.y, rightX, source.y);
+                // 2. Scende
+                g2d.drawLine(rightX, source.y, rightX, pallinoCenterY);
+                // 3. Rientra a SINISTRA verso il pallino
+                g2d.drawLine(rightX, pallinoCenterY, pallinoCenterX, pallinoCenterY);
+            } else {
+                // Prima parte: va solo fino al blocco intermedio
+                // 1. Va verso DESTRA
+                g2d.drawLine(source.x, source.y, rightX, source.y);
+                // 2. Scende fino al top del blocco target
+                g2d.drawLine(rightX, source.y, rightX, target.y);
+            }
         }
     }
 

@@ -40,6 +40,42 @@ public class FlowchartTree {
         // Rimuove la vecchia connessione
         sourceBlock.getOutgoingConnections().remove(conn);
 
+        // GESTIONE SPECIALE per MERGE connections (archi del blocco decisionale)
+        if (conn.isMergeConnection()) {
+            // Inserisco il blocco sul segmento verticale
+            // Calcolo posizione X sulla linea verticale (dipende da sourceEdge)
+            int blockX;
+            Point sourcePos = sourceBlock.getPosition();
+            int horizontalOffset = 60;
+
+            if ("left".equals(conn.getSourceEdge())) {
+                // Ramo sinistro: X è a sinistra del rombo
+                blockX = sourcePos.x + 60 - horizontalOffset - 60; // Centro blocco sulla linea verticale sinistra
+            } else {
+                // Ramo destro: X è a destra del rombo
+                blockX = sourcePos.x + 60 + horizontalOffset - 60; // Centro blocco sulla linea verticale destra
+            }
+
+            // Y: metà tra source e target
+            int blockY = (sourcePos.y + targetBlock.getPosition().y) / 2;
+
+            Block newBlock = new Block(type, text, new Point(blockX, blockY));
+
+            // Ricrea le connessioni mantenendo il routing Manhattan
+            // source (rombo) → newBlock
+            Connection conn1 = new Connection(sourceBlock, newBlock, conn.getLabel(), conn.getSourceEdge(), "top");
+            conn1.setMergeConnection(true);
+            sourceBlock.addConnection(conn1);
+
+            // newBlock → target (pallino)
+            Connection conn2 = new Connection(newBlock, targetBlock, "", "bottom", conn.getTargetEdge());
+            conn2.setMergeConnection(true);
+            newBlock.addConnection(conn2);
+
+            recalculateLayout();
+            return newBlock;
+        }
+
         // Crea nuovo blocco a metà tra source e target
         int midX = (sourceBlock.getPosition().x + targetBlock.getPosition().x) / 2;
         int midY = (sourceBlock.getPosition().y + targetBlock.getPosition().y) / 2;
@@ -242,21 +278,24 @@ public class FlowchartTree {
 
         block.setPosition(new Point(x, y));
 
-        // Se è un blocco DECISION, posiziona manualmente il merge point sotto di esso
+        // Se è un blocco DECISION, trova e posiziona il merge point
         if (block.getType() == BlockType.DECISION) {
-            // Trova il merge point collegato
-            for (Connection conn : block.getOutgoingConnections()) {
-                Block target = conn.getTargetBlock();
-                if (target != null && target.getType() == BlockType.MERGE) {
-                    // Posiziona il merge point centrato sotto il rombo
-                    // Vertice inferiore del rombo: (x + 60, y + 60)
-                    // Centro del pallino deve essere a (x + 60, ...)
-                    // Posizione pallino (angolo) = (x + 50, y + 60 + gap)
-                    int pallinoX = x + 50;
-                    int pallinoY = y + 60 + 20; // 20 pixel sotto il vertice inferiore
-                    target.setPosition(new Point(pallinoX, pallinoY));
-                    break;
+            // Trova il merge point seguendo le connessioni (potrebbe non essere diretto)
+            Block mergePoint = findMergePointFromDecision(block);
+            if (mergePoint != null) {
+                // Calcola Y del merge point: deve essere sotto tutti i blocchi intermedi
+                int maxY = y + 60; // Parte dal vertice inferiore del rombo
+
+                // Trova il blocco più in basso tra i rami SI e NO
+                for (Connection conn : block.getOutgoingConnections()) {
+                    int branchMaxY = findMaxYInBranch(conn.getTargetBlock(), visited);
+                    maxY = Math.max(maxY, branchMaxY);
                 }
+
+                // Posiziona il merge point centrato sotto il rombo e sotto tutti i blocchi
+                int pallinoX = x + 50;
+                int pallinoY = maxY + 40; // 40 pixel sotto l'ultimo blocco
+                mergePoint.setPosition(new Point(pallinoX, pallinoY));
             }
         }
 
@@ -293,6 +332,55 @@ public class FlowchartTree {
             int branchEndY = layoutBlockRecursive(conn.getTargetBlock(), currentX, nextY, depth + 1, visited);
             maxY = Math.max(maxY, branchEndY);
             currentX += HORIZONTAL_SPACING;
+        }
+
+        return maxY;
+    }
+
+    /**
+     * Trova il merge point collegato a un blocco DECISION
+     */
+    private Block findMergePointFromDecision(Block decision) {
+        // Segue le connessioni fino a trovare un MERGE
+        for (Connection conn : decision.getOutgoingConnections()) {
+            Block current = conn.getTargetBlock();
+            while (current != null) {
+                if (current.getType() == BlockType.MERGE) {
+                    return current;
+                }
+                // Segue la prima connessione non backward
+                Block next = null;
+                for (Connection c : current.getOutgoingConnections()) {
+                    if (!c.isBackwardConnection() && c.getTargetBlock() != null) {
+                        next = c.getTargetBlock();
+                        break;
+                    }
+                }
+                current = next;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Trova la Y massima (blocco più in basso) in un ramo prima del merge point
+     */
+    private int findMaxYInBranch(Block start, List<Block> visited) {
+        if (start == null || start.getType() == BlockType.MERGE) {
+            return 0;
+        }
+
+        int maxY = start.getPosition().y + start.getSize().height;
+
+        // Segue le connessioni non backward
+        for (Connection conn : start.getOutgoingConnections()) {
+            if (!conn.isBackwardConnection()) {
+                Block target = conn.getTargetBlock();
+                if (target != null && target.getType() != BlockType.MERGE && !visited.contains(target)) {
+                    int branchY = findMaxYInBranch(target, visited);
+                    maxY = Math.max(maxY, branchY);
+                }
+            }
         }
 
         return maxY;
