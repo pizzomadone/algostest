@@ -74,8 +74,13 @@ public class FlowchartTree {
         if (type == BlockType.DECISION) {
             Block decisionBlock = new Block(type, text, new Point(midX, midY));
 
-            // Crea punto di merge VISIBILE come pallino - PERFETTAMENTE SOTTO il rombo
-            Block mergePoint = new Block(BlockType.MERGE, "", new Point(midX, midY + VERTICAL_SPACING));
+            // Crea punto di merge VISIBILE come pallino - CENTRATO SOTTO il rombo
+            // Il rombo ha dimensione 120x60, quindi centro a (midX + 60, midY + 30)
+            // Pallino di 20x20 deve avere centro a (midX + 60, ...)
+            // Posizione pallino (angolo alto-sinistra) = (midX + 60 - 10, ...) = (midX + 50, ...)
+            int pallinoX = midX + 50; // Centra il pallino rispetto al rombo
+            int pallinoY = midY + VERTICAL_SPACING;
+            Block mergePoint = new Block(BlockType.MERGE, "", new Point(pallinoX, pallinoY));
             mergePoint.setSize(new java.awt.Dimension(20, 20)); // Pallino piccolo
             mergePoint.setVisible(true);
 
@@ -94,8 +99,8 @@ public class FlowchartTree {
             noToMerge.setMergeConnection(true);
             decisionBlock.addConnection(noToMerge);
 
-            // merge → target
-            Connection mergeToTarget = new Connection(mergePoint, targetBlock, "");
+            // merge → target (freccia esce dal BASSO del pallino e va in ALTO del target)
+            Connection mergeToTarget = new Connection(mergePoint, targetBlock, "", "bottom", "top");
             mergePoint.addConnection(mergeToTarget);
 
             recalculateLayout();
