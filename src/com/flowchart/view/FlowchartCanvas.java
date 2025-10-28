@@ -18,14 +18,75 @@ public class FlowchartCanvas extends JPanel {
     private Point currentMousePos;
     private String connectionLabel = "";
     private Connection selectedConnection;
+    private double zoomFactor = 1.0;
+    private JButton zoomInButton;
+    private JButton zoomOutButton;
 
     public FlowchartCanvas(FlowchartModel model) {
         this.model = model;
         setBackground(Color.WHITE);
         setPreferredSize(new Dimension(800, 600));
+        setLayout(null); // Layout assoluto per posizionare i pulsanti
 
         setupMouseListeners();
         setupKeyListeners();
+        setupZoomButtons();
+    }
+
+    private void setupZoomButtons() {
+        // Pulsante Zoom In
+        zoomInButton = new JButton("+");
+        zoomInButton.setFont(new Font("Arial", Font.BOLD, 20));
+        zoomInButton.setFocusable(false);
+        zoomInButton.addActionListener(e -> zoomIn());
+        add(zoomInButton);
+
+        // Pulsante Zoom Out
+        zoomOutButton = new JButton("-");
+        zoomOutButton.setFont(new Font("Arial", Font.BOLD, 20));
+        zoomOutButton.setFocusable(false);
+        zoomOutButton.addActionListener(e -> zoomOut());
+        add(zoomOutButton);
+
+        // Posiziona i pulsanti quando il componente viene ridimensionato
+        addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                positionZoomButtons();
+            }
+        });
+    }
+
+    private void positionZoomButtons() {
+        int buttonSize = 40;
+        int margin = 10;
+        int x = getWidth() - buttonSize - margin;
+        int yOut = getHeight() - buttonSize - margin;
+        int yIn = yOut - buttonSize - 5;
+
+        zoomInButton.setBounds(x, yIn, buttonSize, buttonSize);
+        zoomOutButton.setBounds(x, yOut, buttonSize, buttonSize);
+    }
+
+    public void zoomIn() {
+        if (zoomFactor < 2.0) {
+            zoomFactor += 0.1;
+            repaint();
+        }
+    }
+
+    public void zoomOut() {
+        if (zoomFactor > 0.5) {
+            zoomFactor -= 0.1;
+            repaint();
+        }
+    }
+
+    private Point screenToWorld(Point screenPoint) {
+        return new Point(
+            (int) (screenPoint.x / zoomFactor),
+            (int) (screenPoint.y / zoomFactor)
+        );
     }
 
     private void setupKeyListeners() {
@@ -90,13 +151,14 @@ public class FlowchartCanvas extends JPanel {
     }
 
     private void handleMousePressed(MouseEvent e) {
-        Block clickedBlock = model.getBlockAt(e.getX(), e.getY());
+        Point worldPos = screenToWorld(e.getPoint());
+        Block clickedBlock = model.getBlockAt(worldPos.x, worldPos.y);
 
         if (SwingUtilities.isRightMouseButton(e)) {
             // Click destro: inizia connessione
             if (clickedBlock != null) {
                 connectionSourceBlock = clickedBlock;
-                currentMousePos = e.getPoint();
+                currentMousePos = worldPos;
             }
         } else if (SwingUtilities.isLeftMouseButton(e)) {
             // Click sinistro: seleziona blocco o connessione
@@ -105,12 +167,12 @@ public class FlowchartCanvas extends JPanel {
                 selectedConnection = null;
                 draggedBlock = selectedBlock;
                 dragOffset = new Point(
-                    e.getX() - selectedBlock.getPosition().x,
-                    e.getY() - selectedBlock.getPosition().y
+                    worldPos.x - selectedBlock.getPosition().x,
+                    worldPos.y - selectedBlock.getPosition().y
                 );
             } else {
                 // Se non è un blocco, prova a selezionare una connessione
-                selectedConnection = getConnectionAt(e.getX(), e.getY());
+                selectedConnection = getConnectionAt(worldPos.x, worldPos.y);
                 selectedBlock = null;
             }
         }
@@ -170,8 +232,9 @@ public class FlowchartCanvas extends JPanel {
 
     private void handleMouseReleased(MouseEvent e) {
         if (SwingUtilities.isRightMouseButton(e) && connectionSourceBlock != null) {
+            Point worldPos = screenToWorld(e.getPoint());
             // Controlla se il rilascio è vicino a una pallina (punto medio di una connessione)
-            Connection midpointConnection = getConnectionMidpointAt(e.getX(), e.getY());
+            Connection midpointConnection = getConnectionMidpointAt(worldPos.x, worldPos.y);
 
             if (midpointConnection != null) {
                 // Crea una connessione che punta direttamente al pallino blu (midpoint)
@@ -184,7 +247,7 @@ public class FlowchartCanvas extends JPanel {
             }
 
             // Comportamento normale: connetti a un blocco
-            Block targetBlock = model.getBlockAt(e.getX(), e.getY());
+            Block targetBlock = model.getBlockAt(worldPos.x, worldPos.y);
 
             if (targetBlock != null && targetBlock != connectionSourceBlock) {
                 // Per blocchi decisionali e cicli, chiedi l'etichetta
@@ -254,13 +317,14 @@ public class FlowchartCanvas extends JPanel {
     }
 
     private void handleMouseDragged(MouseEvent e) {
+        Point worldPos = screenToWorld(e.getPoint());
         // Aggiorna sempre la posizione del mouse per le connessioni in corso
-        currentMousePos = e.getPoint();
+        currentMousePos = worldPos;
 
         if (draggedBlock != null) {
             Point newPos = new Point(
-                e.getX() - dragOffset.x,
-                e.getY() - dragOffset.y
+                worldPos.x - dragOffset.x,
+                worldPos.y - dragOffset.y
             );
             draggedBlock.setPosition(newPos);
         }
@@ -269,7 +333,8 @@ public class FlowchartCanvas extends JPanel {
     }
 
     private void handleDoubleClick(MouseEvent e) {
-        Block clickedBlock = model.getBlockAt(e.getX(), e.getY());
+        Point worldPos = screenToWorld(e.getPoint());
+        Block clickedBlock = model.getBlockAt(worldPos.x, worldPos.y);
         if (clickedBlock != null) {
             String newText = JOptionPane.showInputDialog(
                 this,
@@ -356,6 +421,9 @@ public class FlowchartCanvas extends JPanel {
         Graphics2D g2d = (Graphics2D) g;
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
+        // Applica lo zoom
+        g2d.scale(zoomFactor, zoomFactor);
+
         // Disegna le connessioni
         drawConnections(g2d);
 
@@ -392,11 +460,11 @@ public class FlowchartCanvas extends JPanel {
                     g2d.setStroke(new BasicStroke(2));
                 }
 
-                // Disegna la linea
-                g2d.drawLine(source.x, source.y, target.x, target.y);
+                // Disegna la linea (manhattan se necessario)
+                Point arrowStart = drawConnectionLine(g2d, source, target);
 
                 // Disegna la freccia
-                drawArrow(g2d, source, target);
+                drawArrow(g2d, arrowStart, target);
 
                 // Disegna la pallina a metà della connessione solo se NON punta a un midpoint
                 if (!conn.isTargetingMidpoint()) {
@@ -421,6 +489,65 @@ public class FlowchartCanvas extends JPanel {
         }
 
         g2d.setStroke(new BasicStroke(1));
+    }
+
+    /**
+     * Disegna la linea di connessione (diretta o manhattan style).
+     * Restituisce il punto da cui inizia la freccia (l'ultimo punto prima del target).
+     */
+    private Point drawConnectionLine(Graphics2D g2d, Point source, Point target) {
+        int dx = target.x - source.x;
+        int dy = target.y - source.y;
+        double distance = Math.sqrt(dx * dx + dy * dy);
+
+        // Se la distanza è molto piccola, usa linea diretta
+        if (distance < 50) {
+            g2d.drawLine(source.x, source.y, target.x, target.y);
+            return source;
+        }
+
+        // Calcola l'angolo di inclinazione
+        double angle = Math.abs(Math.atan2(dy, dx));
+        double angleDegrees = Math.toDegrees(angle);
+
+        // Se l'angolo è vicino a 0, 90, 180, 270 gradi (+/- 30 gradi), usa linea diretta
+        boolean isNearlyHorizontal = angleDegrees < 30 || angleDegrees > 150;
+        boolean isNearlyVertical = (angleDegrees > 60 && angleDegrees < 120);
+
+        if (isNearlyHorizontal || isNearlyVertical) {
+            // Linea diretta
+            g2d.drawLine(source.x, source.y, target.x, target.y);
+            return source;
+        }
+
+        // Usa manhattan style: linee ortogonali
+        // Determina se iniziare con segmento orizzontale o verticale in base ai lati
+        boolean startHorizontal = Math.abs(dx) > Math.abs(dy);
+
+        Point mid;
+        if (startHorizontal) {
+            // Vai prima orizzontalmente, poi verticalmente
+            int midX = source.x + dx / 2;
+            mid = new Point(midX, source.y);
+            Point corner = new Point(midX, target.y);
+
+            g2d.drawLine(source.x, source.y, mid.x, mid.y);
+            g2d.drawLine(mid.x, mid.y, corner.x, corner.y);
+            g2d.drawLine(corner.x, corner.y, target.x, target.y);
+
+            return corner;
+        } else {
+            // Vai prima verticalmente, poi orizzontalmente
+            int midY = source.y + dy / 2;
+            mid = new Point(source.x, midY);
+            Point corner = new Point(target.x, midY);
+
+            g2d.drawLine(source.x, source.y, mid.x, mid.y);
+            g2d.drawLine(mid.x, mid.y, corner.x, corner.y);
+            g2d.drawLine(corner.x, corner.y, target.x, target.y);
+
+            return corner;
+        }
     }
 
     private void drawArrow(Graphics2D g2d, Point source, Point target) {
