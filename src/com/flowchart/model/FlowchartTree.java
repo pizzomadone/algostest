@@ -1,27 +1,31 @@
 package com.flowchart.model;
 
+import com.flowchart.layout.LayoutEngine;
+import static com.flowchart.layout.LayoutConstants.*;
+
+import java.awt.Dimension;
 import java.awt.Point;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Gestisce il layout ad albero del flowchart con posizionamento automatico verticale
+ * Manages the flowchart tree structure and delegates layout calculations
+ * to the LayoutEngine for proper positioning of all blocks.
  */
 public class FlowchartTree {
     private Block root;
-    private static final int VERTICAL_SPACING = 100;
-    private static final int HORIZONTAL_SPACING = 200;
-    private static final int START_X = 400;
-    private static final int START_Y = 50;
+    private final LayoutEngine layoutEngine;
 
     public FlowchartTree() {
-        // Crea blocco START
+        this.layoutEngine = new LayoutEngine();
+
+        // Create START block
         root = new Block(BlockType.START, "Inizio", new Point(START_X, START_Y));
 
-        // Crea blocco END
+        // Create END block
         Block endBlock = new Block(BlockType.END, "Fine", new Point(START_X, START_Y + VERTICAL_SPACING));
 
-        // Connette START → END
+        // Connect START → END
         Connection conn = new Connection(root, endBlock, "");
         root.addConnection(conn);
     }
@@ -31,143 +35,158 @@ public class FlowchartTree {
     }
 
     /**
-     * Inserisce un nuovo blocco in mezzo a una connessione esistente
+     * Inserts a new block into an existing connection.
+     * Handles special cases for decision branches, loops, and regular connections.
      */
     public Block insertBlockInConnection(Connection conn, BlockType type, String text) {
         Block sourceBlock = conn.getSourceBlock();
         Block targetBlock = conn.getTargetBlock();
 
-        // Rimuove la vecchia connessione usando il metodo corretto
+        // Remove the old connection
         sourceBlock.removeConnection(conn);
 
-        // GESTIONE SPECIALE per MERGE connections (archi del blocco decisionale)
+        // SPECIAL HANDLING: Decision block branches (merge connections)
         if (conn.isMergeConnection()) {
-            // Determina in quale ramo siamo (preserva dall'originale o usa sourceEdge)
-            String branch = conn.getMergeBranch();
-            if (branch == null) {
-                branch = "left".equals(conn.getSourceEdge()) ? "left" : "right";
-            }
-
-            // Inserisco il blocco sul segmento verticale
-            // Calcolo posizione X sulla linea verticale (dipende dal ramo)
-            int blockX;
-            Point sourcePos = sourceBlock.getPosition();
-            int horizontalOffset = 60;
-
-            if ("left".equals(branch)) {
-                // Ramo sinistro: X è a sinistra del rombo
-                blockX = sourcePos.x + 60 - horizontalOffset - 60; // Centro blocco sulla linea verticale sinistra
-            } else {
-                // Ramo destro: X è a destra del rombo
-                blockX = sourcePos.x + 60 + horizontalOffset - 60; // Centro blocco sulla linea verticale destra
-            }
-
-            // Y: metà tra source e target
-            int blockY = (sourcePos.y + targetBlock.getPosition().y) / 2;
-
-            Block newBlock = new Block(type, text, new Point(blockX, blockY));
-
-            // Ricrea le connessioni mantenendo il routing Manhattan E il ramo
-            // source (rombo o blocco precedente) → newBlock
-            Connection conn1 = new Connection(sourceBlock, newBlock, conn.getLabel(), conn.getSourceEdge(), "top");
-            conn1.setMergeConnection(true);
-            conn1.setMergeBranch(branch); // Propaga il ramo
-            sourceBlock.addConnection(conn1);
-
-            // newBlock → target (pallino o prossimo blocco)
-            Connection conn2 = new Connection(newBlock, targetBlock, "", "bottom", conn.getTargetEdge());
-            conn2.setMergeConnection(true);
-            conn2.setMergeBranch(branch); // Propaga il ramo
-            newBlock.addConnection(conn2);
-
-            recalculateLayout();
-            return newBlock;
+            return insertBlockInBranch(conn, type, text, sourceBlock, targetBlock);
         }
 
-        // Crea nuovo blocco a metà tra source e target
+        // Calculate initial position (midpoint between source and target)
         int midX = (sourceBlock.getPosition().x + targetBlock.getPosition().x) / 2;
         int midY = (sourceBlock.getPosition().y + targetBlock.getPosition().y) / 2;
 
-        // Gestione speciale per cicli (WHILE, FOR, DO-WHILE)
+        // SPECIAL HANDLING: Loop structures (WHILE, FOR, DO-WHILE)
         if (type == BlockType.WHILE_LOOP || type == BlockType.FOR_LOOP || type == BlockType.DO_WHILE_LOOP) {
-            Block loopBlock = new Block(type, text, new Point(midX, midY));
-            Block bodyBlock = new Block(BlockType.LOOP_BODY, "corpo", new Point(midX, midY + VERTICAL_SPACING));
-
-            // Connessioni per il ciclo:
-            // source → loopBlock
-            Connection toLoop = new Connection(sourceBlock, loopBlock, "");
-            sourceBlock.addConnection(toLoop);
-
-            // loopBlock → bodyBlock (SI - entra nel corpo)
-            Connection toBody = new Connection(loopBlock, bodyBlock, "SI", false);
-            loopBlock.addConnection(toBody);
-
-            // bodyBlock → loopBlock (freccia di ritorno) - MARCATA COME BACKWARD
-            Connection backToLoop = new Connection(bodyBlock, loopBlock, "", true);
-            bodyBlock.addConnection(backToLoop);
-
-            // loopBlock → targetBlock (NO - esce dal ciclo)
-            Connection exitLoop = new Connection(loopBlock, targetBlock, "NO");
-            loopBlock.addConnection(exitLoop);
-
-            recalculateLayout();
-            return loopBlock;
+            return insertLoopBlock(type, text, sourceBlock, targetBlock, midX, midY);
         }
 
-        // Gestione speciale per decisioni (IF)
+        // SPECIAL HANDLING: Decision blocks (IF)
         if (type == BlockType.DECISION) {
-            Block decisionBlock = new Block(type, text, new Point(midX, midY));
-
-            // Calcola posizione del pallino: CENTRATO sotto il rombo
-            // Rombo: posizione (midX, midY), dimensione 120x60
-            // Centro del rombo: (midX + 60, midY + 30)
-            // Pallino: dimensione 20x20, deve avere centro uguale al centro X del rombo
-            // Quindi pallino.x = midX + 60 - 10 = midX + 50
-            int pallinoX = midX + 50;
-            int pallinoY = midY + VERTICAL_SPACING;
-            Block mergePoint = new Block(BlockType.MERGE, "", new Point(pallinoX, pallinoY));
-            mergePoint.setSize(new java.awt.Dimension(20, 20));
-            mergePoint.setVisible(true);
-
-            // source → decision
-            Connection toDecision = new Connection(sourceBlock, decisionBlock, "");
-            sourceBlock.addConnection(toDecision);
-
-            // decision → merge (SI - esce dal vertice SINISTRO)
-            // Routing: sinistra → giù → destra → pallino
-            Connection siToMerge = new Connection(decisionBlock, mergePoint, "SI", "left", "left");
-            siToMerge.setMergeConnection(true);
-            siToMerge.setMergeBranch("left"); // Ramo sinistro
-            decisionBlock.addConnection(siToMerge);
-
-            // decision → merge (NO - esce dal vertice DESTRO)
-            // Routing: destra → giù → sinistra → pallino
-            Connection noToMerge = new Connection(decisionBlock, mergePoint, "NO", "right", "right");
-            noToMerge.setMergeConnection(true);
-            noToMerge.setMergeBranch("right"); // Ramo destro
-            decisionBlock.addConnection(noToMerge);
-
-            // merge → target (dal basso del pallino verso l'alto del target)
-            Connection mergeToTarget = new Connection(mergePoint, targetBlock, "", "bottom", "top");
-            mergePoint.addConnection(mergeToTarget);
-
-            recalculateLayout();
-            return decisionBlock;
+            return insertDecisionBlock(text, sourceBlock, targetBlock, midX, midY);
         }
 
-        // Caso normale: inserimento semplice
+        // REGULAR CASE: Simple linear insertion
         Block newBlock = new Block(type, text, new Point(midX, midY));
 
-        // Crea nuove connessioni: source → nuovo → target
+        // Create connections: source → new → target
         Connection conn1 = new Connection(sourceBlock, newBlock, "");
         Connection conn2 = new Connection(newBlock, targetBlock, "");
         sourceBlock.addConnection(conn1);
         newBlock.addConnection(conn2);
 
-        // Ricalcola layout per spostare tutto verso il basso
+        // Recalculate layout to adjust all positions
         recalculateLayout();
 
         return newBlock;
+    }
+
+    /**
+     * Inserts a block within a decision branch (left or right).
+     * Maintains the branch structure and merge connection properties.
+     */
+    private Block insertBlockInBranch(Connection conn, BlockType type, String text,
+                                      Block sourceBlock, Block targetBlock) {
+        // Determine which branch we're in (left or right)
+        String branch = conn.getMergeBranch();
+        if (branch == null) {
+            branch = "left".equals(conn.getSourceEdge()) ? "left" : "right";
+        }
+
+        // Calculate position - blocks in branches will be positioned by layout engine
+        // but we need initial position for block creation
+        Point sourcePos = sourceBlock.getPosition();
+        int blockX = sourcePos.x;
+        int blockY = (sourcePos.y + targetBlock.getPosition().y) / 2;
+
+        Block newBlock = new Block(type, text, new Point(blockX, blockY));
+
+        // Recreate connections maintaining Manhattan routing and branch info
+        // source (decision or previous block) → newBlock
+        Connection conn1 = new Connection(sourceBlock, newBlock, conn.getLabel(), conn.getSourceEdge(), "top");
+        conn1.setMergeConnection(true);
+        conn1.setMergeBranch(branch); // Propagate branch info
+        sourceBlock.addConnection(conn1);
+
+        // newBlock → target (merge point or next block)
+        Connection conn2 = new Connection(newBlock, targetBlock, "", "bottom", conn.getTargetEdge());
+        conn2.setMergeConnection(true);
+        conn2.setMergeBranch(branch); // Propagate branch info
+        newBlock.addConnection(conn2);
+
+        recalculateLayout();
+        return newBlock;
+    }
+
+    /**
+     * Inserts a loop block (WHILE, FOR, or DO-WHILE) with its loop body.
+     */
+    private Block insertLoopBlock(BlockType type, String text, Block sourceBlock, Block targetBlock,
+                                   int midX, int midY) {
+        Block loopBlock = new Block(type, text, new Point(midX, midY));
+        Block bodyBlock = new Block(BlockType.LOOP_BODY, "corpo", new Point(midX, midY + VERTICAL_SPACING));
+
+        // Loop connections:
+        // source → loopBlock
+        Connection toLoop = new Connection(sourceBlock, loopBlock, "");
+        sourceBlock.addConnection(toLoop);
+
+        // loopBlock → bodyBlock (YES - enter loop body)
+        Connection toBody = new Connection(loopBlock, bodyBlock, "SI", false);
+        loopBlock.addConnection(toBody);
+
+        // bodyBlock → loopBlock (return arrow) - MARKED AS BACKWARD
+        Connection backToLoop = new Connection(bodyBlock, loopBlock, "", true);
+        bodyBlock.addConnection(backToLoop);
+
+        // loopBlock → targetBlock (NO - exit loop)
+        Connection exitLoop = new Connection(loopBlock, targetBlock, "NO");
+        loopBlock.addConnection(exitLoop);
+
+        recalculateLayout();
+        return loopBlock;
+    }
+
+    /**
+     * Inserts a decision block (IF) with left and right branches and a merge point.
+     */
+    private Block insertDecisionBlock(String text, Block sourceBlock, Block targetBlock,
+                                       int midX, int midY) {
+        Block decisionBlock = new Block(BlockType.DECISION, text, new Point(midX, midY));
+
+        // Create merge point (blue dot) - positioned by layout engine
+        // Initial position calculation: centered under the decision block
+        // Decision block: position (midX, midY), size 120x60
+        // Center X of decision: midX + 60
+        // Merge point size: 20x20, so X position = midX + 60 - 10 = midX + 50
+        int mergePointX = midX + 50;
+        int mergePointY = midY + VERTICAL_SPACING;
+        Block mergePoint = new Block(BlockType.MERGE, "", new Point(mergePointX, mergePointY));
+        mergePoint.setSize(new Dimension(MERGE_POINT_SIZE, MERGE_POINT_SIZE));
+        mergePoint.setVisible(true);
+
+        // source → decision
+        Connection toDecision = new Connection(sourceBlock, decisionBlock, "");
+        sourceBlock.addConnection(toDecision);
+
+        // decision → merge (YES - exits from LEFT vertex)
+        // Routing: left → down → right → merge point
+        Connection yesToMerge = new Connection(decisionBlock, mergePoint, "SI", "left", "left");
+        yesToMerge.setMergeConnection(true);
+        yesToMerge.setMergeBranch("left"); // Left branch
+        decisionBlock.addConnection(yesToMerge);
+
+        // decision → merge (NO - exits from RIGHT vertex)
+        // Routing: right → down → left → merge point
+        Connection noToMerge = new Connection(decisionBlock, mergePoint, "NO", "right", "right");
+        noToMerge.setMergeConnection(true);
+        noToMerge.setMergeBranch("right"); // Right branch
+        decisionBlock.addConnection(noToMerge);
+
+        // merge → target (from bottom of merge point to top of target)
+        Connection mergeToTarget = new Connection(mergePoint, targetBlock, "", "bottom", "top");
+        mergePoint.addConnection(mergeToTarget);
+
+        recalculateLayout();
+        return decisionBlock;
     }
 
     /**
@@ -320,110 +339,25 @@ public class FlowchartTree {
     }
 
     /**
-     * Ricalcola il layout di tutti i blocchi
+     * Recalculates the layout of all blocks using the LayoutEngine.
+     * This is called whenever the structure changes (block insertion/deletion).
      */
     private void recalculateLayout() {
-        List<Block> visited = new ArrayList<>();
-        layoutBlockRecursive(root, START_X, START_Y, 0, visited);
-    }
-
-    private int layoutBlockRecursive(Block block, int x, int y, int depth, List<Block> visited) {
-        // Evita cicli infiniti (per le frecce di ritorno dei loop)
-        if (visited.contains(block)) {
-            return y;
-        }
-        visited.add(block);
-
-        // I MERGE points non vengono riposizionati dal layout automatico
-        // Mantengono la posizione manuale impostata quando sono stati creati
-        if (block.getType() == BlockType.MERGE) {
-            // Continua il layout per i blocchi successivi senza spostare questo
-            List<Connection> outgoing = block.getOutgoingConnections();
-            if (!outgoing.isEmpty()) {
-                Connection conn = outgoing.get(0);
-                Block target = conn.getTargetBlock();
-                if (target != null && !visited.contains(target)) {
-                    // Continua dal merge point con Y dopo il merge
-                    int mergeY = block.getPosition().y;
-                    return layoutBlockRecursive(target, x, mergeY + VERTICAL_SPACING, depth, visited);
-                }
-            }
-            return block.getPosition().y;
-        }
-
-        block.setPosition(new Point(x, y));
-
-        // Se è un blocco DECISION, trova e posiziona il merge point
-        if (block.getType() == BlockType.DECISION) {
-            // Trova il merge point seguendo le connessioni (potrebbe non essere diretto)
-            Block mergePoint = findMergePointFromDecision(block);
-            if (mergePoint != null) {
-                // Calcola Y del merge point: deve essere sotto tutti i blocchi intermedi
-                int maxY = y + 60; // Parte dal vertice inferiore del rombo
-
-                // Trova il blocco più in basso tra i rami SI e NO
-                for (Connection conn : block.getOutgoingConnections()) {
-                    int branchMaxY = findMaxYInBranch(conn.getTargetBlock(), visited);
-                    maxY = Math.max(maxY, branchMaxY);
-                }
-
-                // Posiziona il merge point centrato sotto il rombo e sotto tutti i blocchi
-                int pallinoX = x + 50;
-                int pallinoY = maxY + 40; // 40 pixel sotto l'ultimo blocco
-                mergePoint.setPosition(new Point(pallinoX, pallinoY));
-            }
-        }
-
-        List<Connection> outgoing = block.getOutgoingConnections();
-        if (outgoing.isEmpty()) {
-            return y;
-        }
-
-        // Filtra le connessioni backward (frecce di ritorno dei loop)
-        List<Connection> forwardConnections = new ArrayList<>();
-        for (Connection conn : outgoing) {
-            if (!conn.isBackwardConnection() && conn.getTargetBlock() != null) {
-                forwardConnections.add(conn);
-            }
-        }
-
-        if (forwardConnections.isEmpty()) {
-            return y;
-        }
-
-        int nextY = y + VERTICAL_SPACING;
-
-        // Se ha una sola connessione forward (flusso lineare)
-        if (forwardConnections.size() == 1) {
-            Connection conn = forwardConnections.get(0);
-            return layoutBlockRecursive(conn.getTargetBlock(), x, nextY, depth, visited);
-        }
-
-        // Se ha più connessioni forward (ramificazione - blocco decision)
-        int currentX = x - (forwardConnections.size() - 1) * HORIZONTAL_SPACING / 2;
-        int maxY = nextY;
-
-        for (Connection conn : forwardConnections) {
-            int branchEndY = layoutBlockRecursive(conn.getTargetBlock(), currentX, nextY, depth + 1, visited);
-            maxY = Math.max(maxY, branchEndY);
-            currentX += HORIZONTAL_SPACING;
-        }
-
-        return maxY;
+        layoutEngine.performLayout(root);
     }
 
     /**
-     * Trova il merge point collegato a un blocco DECISION
+     * Finds the merge point block connected to a decision block.
+     * Follows the connections until a MERGE block is found.
      */
     private Block findMergePointFromDecision(Block decision) {
-        // Segue le connessioni fino a trovare un MERGE
         for (Connection conn : decision.getOutgoingConnections()) {
             Block current = conn.getTargetBlock();
             while (current != null) {
                 if (current.getType() == BlockType.MERGE) {
                     return current;
                 }
-                // Segue la prima connessione non backward
+                // Follow the first non-backward connection
                 Block next = null;
                 for (Connection c : current.getOutgoingConnections()) {
                     if (!c.isBackwardConnection() && c.getTargetBlock() != null) {
@@ -435,29 +369,5 @@ public class FlowchartTree {
             }
         }
         return null;
-    }
-
-    /**
-     * Trova la Y massima (blocco più in basso) in un ramo prima del merge point
-     */
-    private int findMaxYInBranch(Block start, List<Block> visited) {
-        if (start == null || start.getType() == BlockType.MERGE) {
-            return 0;
-        }
-
-        int maxY = start.getPosition().y + start.getSize().height;
-
-        // Segue le connessioni non backward
-        for (Connection conn : start.getOutgoingConnections()) {
-            if (!conn.isBackwardConnection()) {
-                Block target = conn.getTargetBlock();
-                if (target != null && target.getType() != BlockType.MERGE && !visited.contains(target)) {
-                    int branchY = findMaxYInBranch(target, visited);
-                    maxY = Math.max(maxY, branchY);
-                }
-            }
-        }
-
-        return maxY;
     }
 }

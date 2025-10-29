@@ -1,13 +1,16 @@
 package com.flowchart.view;
 
 import com.flowchart.model.*;
+import static com.flowchart.layout.LayoutConstants.*;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.List;
 
 /**
- * Nuovo Canvas con sistema di layout verticale automatico
+ * Canvas for rendering and interacting with the flowchart diagram.
+ * Handles drawing blocks, connections, and user interactions (clicks, hovers, edits).
  */
 public class FlowchartCanvas extends JPanel {
     private FlowchartTree tree;
@@ -236,65 +239,72 @@ public class FlowchartCanvas extends JPanel {
         return null;
     }
 
+    /**
+     * Checks if a point is on a merge connection (decision block branch).
+     * Handles Manhattan routing with horizontal and vertical segments.
+     */
     private boolean isPointOnMergeConnection(int px, int py, Point source, Point target, Connection conn) {
-        int horizontalOffset = 60;
         String branch = conn.getMergeBranch();
         boolean isLeftBranch = "left".equals(branch);
         boolean isTargetMergePoint = (conn.getTargetBlock().getType() == BlockType.MERGE);
         boolean isSourceDecision = (conn.getSourceBlock().getType() == BlockType.DECISION);
 
+        // Click tolerance in pixels
+        final int CLICK_TOLERANCE = 10;
+
         if (isLeftBranch) {
-            int leftX = isSourceDecision ? (source.x - horizontalOffset) : source.x;
+            int leftX = isSourceDecision ? (source.x - BRANCH_HORIZONTAL_OFFSET) : source.x;
 
             if (isTargetMergePoint) {
-                int pallinoCenterX = conn.getTargetBlock().getPosition().x + conn.getTargetBlock().getSize().width / 2;
-                int pallinoCenterY = conn.getTargetBlock().getPosition().y + conn.getTargetBlock().getSize().height / 2;
+                int mergeCenterX = conn.getTargetBlock().getPosition().x + conn.getTargetBlock().getSize().width / 2;
+                int mergeCenterY = conn.getTargetBlock().getPosition().y + conn.getTargetBlock().getSize().height / 2;
 
                 if (isSourceDecision) {
-                    // Dal rombo: orizzontale → verticale → orizzontale
-                    if (distanceFromLine(px, py, source.x, source.y, leftX, source.y) < 10) return true;
-                    if (distanceFromLine(px, py, leftX, source.y, leftX, pallinoCenterY) < 10) return true;
-                    if (distanceFromLine(px, py, leftX, pallinoCenterY, pallinoCenterX, pallinoCenterY) < 10) return true;
+                    // From decision diamond: horizontal → vertical → horizontal
+                    if (distanceFromLine(px, py, source.x, source.y, leftX, source.y) < CLICK_TOLERANCE) return true;
+                    if (distanceFromLine(px, py, leftX, source.y, leftX, mergeCenterY) < CLICK_TOLERANCE) return true;
+                    if (distanceFromLine(px, py, leftX, mergeCenterY, mergeCenterX, mergeCenterY) < CLICK_TOLERANCE) return true;
                 } else {
-                    // Da blocco: verticale → orizzontale
-                    if (distanceFromLine(px, py, source.x, source.y, source.x, pallinoCenterY) < 10) return true;
-                    if (distanceFromLine(px, py, source.x, pallinoCenterY, pallinoCenterX, pallinoCenterY) < 10) return true;
+                    // From intermediate block: vertical → horizontal
+                    if (distanceFromLine(px, py, source.x, source.y, source.x, mergeCenterY) < CLICK_TOLERANCE) return true;
+                    if (distanceFromLine(px, py, source.x, mergeCenterY, mergeCenterX, mergeCenterY) < CLICK_TOLERANCE) return true;
                 }
             } else {
                 if (isSourceDecision) {
-                    // Dal rombo: orizzontale → verticale
-                    if (distanceFromLine(px, py, source.x, source.y, leftX, source.y) < 10) return true;
-                    if (distanceFromLine(px, py, leftX, source.y, leftX, target.y) < 10) return true;
+                    // From decision diamond: horizontal → vertical
+                    if (distanceFromLine(px, py, source.x, source.y, leftX, source.y) < CLICK_TOLERANCE) return true;
+                    if (distanceFromLine(px, py, leftX, source.y, leftX, target.y) < CLICK_TOLERANCE) return true;
                 } else {
-                    // Da blocco: solo verticale
-                    if (distanceFromLine(px, py, source.x, source.y, source.x, target.y) < 10) return true;
+                    // From intermediate block: only vertical
+                    if (distanceFromLine(px, py, source.x, source.y, source.x, target.y) < CLICK_TOLERANCE) return true;
                 }
             }
         } else {
-            int rightX = isSourceDecision ? (source.x + horizontalOffset) : source.x;
+            // RIGHT BRANCH
+            int rightX = isSourceDecision ? (source.x + BRANCH_HORIZONTAL_OFFSET) : source.x;
 
             if (isTargetMergePoint) {
-                int pallinoCenterX = conn.getTargetBlock().getPosition().x + conn.getTargetBlock().getSize().width / 2;
-                int pallinoCenterY = conn.getTargetBlock().getPosition().y + conn.getTargetBlock().getSize().height / 2;
+                int mergeCenterX = conn.getTargetBlock().getPosition().x + conn.getTargetBlock().getSize().width / 2;
+                int mergeCenterY = conn.getTargetBlock().getPosition().y + conn.getTargetBlock().getSize().height / 2;
 
                 if (isSourceDecision) {
-                    // Dal rombo: orizzontale → verticale → orizzontale
-                    if (distanceFromLine(px, py, source.x, source.y, rightX, source.y) < 10) return true;
-                    if (distanceFromLine(px, py, rightX, source.y, rightX, pallinoCenterY) < 10) return true;
-                    if (distanceFromLine(px, py, rightX, pallinoCenterY, pallinoCenterX, pallinoCenterY) < 10) return true;
+                    // From decision diamond: horizontal → vertical → horizontal
+                    if (distanceFromLine(px, py, source.x, source.y, rightX, source.y) < CLICK_TOLERANCE) return true;
+                    if (distanceFromLine(px, py, rightX, source.y, rightX, mergeCenterY) < CLICK_TOLERANCE) return true;
+                    if (distanceFromLine(px, py, rightX, mergeCenterY, mergeCenterX, mergeCenterY) < CLICK_TOLERANCE) return true;
                 } else {
-                    // Da blocco: verticale → orizzontale
-                    if (distanceFromLine(px, py, source.x, source.y, source.x, pallinoCenterY) < 10) return true;
-                    if (distanceFromLine(px, py, source.x, pallinoCenterY, pallinoCenterX, pallinoCenterY) < 10) return true;
+                    // From intermediate block: vertical → horizontal
+                    if (distanceFromLine(px, py, source.x, source.y, source.x, mergeCenterY) < CLICK_TOLERANCE) return true;
+                    if (distanceFromLine(px, py, source.x, mergeCenterY, mergeCenterX, mergeCenterY) < CLICK_TOLERANCE) return true;
                 }
             } else {
                 if (isSourceDecision) {
-                    // Dal rombo: orizzontale → verticale
-                    if (distanceFromLine(px, py, source.x, source.y, rightX, source.y) < 10) return true;
-                    if (distanceFromLine(px, py, rightX, source.y, rightX, target.y) < 10) return true;
+                    // From decision diamond: horizontal → vertical
+                    if (distanceFromLine(px, py, source.x, source.y, rightX, source.y) < CLICK_TOLERANCE) return true;
+                    if (distanceFromLine(px, py, rightX, source.y, rightX, target.y) < CLICK_TOLERANCE) return true;
                 } else {
-                    // Da blocco: solo verticale
-                    if (distanceFromLine(px, py, source.x, source.y, source.x, target.y) < 10) return true;
+                    // From intermediate block: only vertical
+                    if (distanceFromLine(px, py, source.x, source.y, source.x, target.y) < CLICK_TOLERANCE) return true;
                 }
             }
         }
@@ -422,93 +432,75 @@ public class FlowchartCanvas extends JPanel {
         g2d.drawLine(target.x, midY2, target.x, target.y);
     }
 
-    private void drawMergeConnection(Graphics2D g2d, Point source, Point target, Block sourceBlock, Block targetBlock, String branch) {
-        // Manhattan routing per connessioni del blocco decisionale
-        // Gestisce sia connessioni complete (rombo → pallino) che parziali (rombo → blocco → pallino)
-        // branch indica "left" o "right" per sapere in quale ramo del decision siamo
-
-        int horizontalOffset = 60; // Quanto andare lateralmente prima di scendere
-
-        // Determina quale ramo è
+    /**
+     * Draws a merge connection using Manhattan routing.
+     * Handles connections from decision blocks to merge points or intermediate blocks.
+     *
+     * @param branch "left" or "right" indicating which branch of the decision block
+     */
+    private void drawMergeConnection(Graphics2D g2d, Point source, Point target,
+                                     Block sourceBlock, Block targetBlock, String branch) {
         boolean isLeftBranch = "left".equals(branch);
-
-        // Determina se il target è il pallino finale o un blocco intermedio
         boolean isTargetMergePoint = (targetBlock.getType() == BlockType.MERGE);
-
-        // Determina se il source è il rombo o un blocco intermedio
         boolean isSourceDecision = (sourceBlock.getType() == BlockType.DECISION);
 
         if (isLeftBranch) {
-            // RAMO SINISTRO (SI)
-            int leftX = isSourceDecision ? (source.x - horizontalOffset) : source.x;
+            // LEFT BRANCH (YES)
+            int leftX = isSourceDecision ? (source.x - BRANCH_HORIZONTAL_OFFSET) : source.x;
 
             if (isTargetMergePoint) {
-                // Va fino al centro del pallino
-                int pallinoCenterX = targetBlock.getPosition().x + targetBlock.getSize().width / 2;
-                int pallinoCenterY = targetBlock.getPosition().y + targetBlock.getSize().height / 2;
+                // Draw to merge point center
+                int mergeCenterX = targetBlock.getPosition().x + targetBlock.getSize().width / 2;
+                int mergeCenterY = targetBlock.getPosition().y + targetBlock.getSize().height / 2;
 
                 if (isSourceDecision) {
-                    // Dal rombo: orizzontale → verticale → orizzontale
-                    // 1. Va verso SINISTRA
-                    g2d.drawLine(source.x, source.y, leftX, source.y);
-                    // 2. Scende
-                    g2d.drawLine(leftX, source.y, leftX, pallinoCenterY);
-                    // 3. Rientra a DESTRA verso il pallino
-                    g2d.drawLine(leftX, pallinoCenterY, pallinoCenterX, pallinoCenterY);
+                    // From decision: horizontal → vertical → horizontal
+                    g2d.drawLine(source.x, source.y, leftX, source.y);  // Go LEFT
+                    g2d.drawLine(leftX, source.y, leftX, mergeCenterY);  // Go DOWN
+                    g2d.drawLine(leftX, mergeCenterY, mergeCenterX, mergeCenterY);  // Go RIGHT to merge
                 } else {
-                    // Da blocco intermedio: verticale → orizzontale
-                    // 1. Scende sulla stessa X
-                    g2d.drawLine(source.x, source.y, source.x, pallinoCenterY);
-                    // 2. Rientra a DESTRA verso il pallino
-                    g2d.drawLine(source.x, pallinoCenterY, pallinoCenterX, pallinoCenterY);
+                    // From intermediate block: vertical → horizontal
+                    g2d.drawLine(source.x, source.y, source.x, mergeCenterY);  // Go DOWN
+                    g2d.drawLine(source.x, mergeCenterY, mergeCenterX, mergeCenterY);  // Go RIGHT to merge
                 }
             } else {
-                // Va solo fino al blocco intermedio
+                // Draw to intermediate block
                 if (isSourceDecision) {
-                    // Dal rombo: orizzontale → verticale
-                    // 1. Va verso SINISTRA
-                    g2d.drawLine(source.x, source.y, leftX, source.y);
-                    // 2. Scende fino al top del blocco target
-                    g2d.drawLine(leftX, source.y, leftX, target.y);
+                    // From decision: horizontal → vertical
+                    g2d.drawLine(source.x, source.y, leftX, source.y);  // Go LEFT
+                    g2d.drawLine(leftX, source.y, leftX, target.y);  // Go DOWN to target
                 } else {
-                    // Da blocco intermedio: solo verticale
+                    // From intermediate block: only vertical
                     g2d.drawLine(source.x, source.y, source.x, target.y);
                 }
             }
         } else {
-            // RAMO DESTRO (NO)
-            int rightX = isSourceDecision ? (source.x + horizontalOffset) : source.x;
+            // RIGHT BRANCH (NO)
+            int rightX = isSourceDecision ? (source.x + BRANCH_HORIZONTAL_OFFSET) : source.x;
 
             if (isTargetMergePoint) {
-                // Va fino al centro del pallino
-                int pallinoCenterX = targetBlock.getPosition().x + targetBlock.getSize().width / 2;
-                int pallinoCenterY = targetBlock.getPosition().y + targetBlock.getSize().height / 2;
+                // Draw to merge point center
+                int mergeCenterX = targetBlock.getPosition().x + targetBlock.getSize().width / 2;
+                int mergeCenterY = targetBlock.getPosition().y + targetBlock.getSize().height / 2;
 
                 if (isSourceDecision) {
-                    // Dal rombo: orizzontale → verticale → orizzontale
-                    // 1. Va verso DESTRA
-                    g2d.drawLine(source.x, source.y, rightX, source.y);
-                    // 2. Scende
-                    g2d.drawLine(rightX, source.y, rightX, pallinoCenterY);
-                    // 3. Rientra a SINISTRA verso il pallino
-                    g2d.drawLine(rightX, pallinoCenterY, pallinoCenterX, pallinoCenterY);
+                    // From decision: horizontal → vertical → horizontal
+                    g2d.drawLine(source.x, source.y, rightX, source.y);  // Go RIGHT
+                    g2d.drawLine(rightX, source.y, rightX, mergeCenterY);  // Go DOWN
+                    g2d.drawLine(rightX, mergeCenterY, mergeCenterX, mergeCenterY);  // Go LEFT to merge
                 } else {
-                    // Da blocco intermedio: verticale → orizzontale
-                    // 1. Scende sulla stessa X
-                    g2d.drawLine(source.x, source.y, source.x, pallinoCenterY);
-                    // 2. Rientra a SINISTRA verso il pallino
-                    g2d.drawLine(source.x, pallinoCenterY, pallinoCenterX, pallinoCenterY);
+                    // From intermediate block: vertical → horizontal
+                    g2d.drawLine(source.x, source.y, source.x, mergeCenterY);  // Go DOWN
+                    g2d.drawLine(source.x, mergeCenterY, mergeCenterX, mergeCenterY);  // Go LEFT to merge
                 }
             } else {
-                // Va solo fino al blocco intermedio
+                // Draw to intermediate block
                 if (isSourceDecision) {
-                    // Dal rombo: orizzontale → verticale
-                    // 1. Va verso DESTRA
-                    g2d.drawLine(source.x, source.y, rightX, source.y);
-                    // 2. Scende fino al top del blocco target
-                    g2d.drawLine(rightX, source.y, rightX, target.y);
+                    // From decision: horizontal → vertical
+                    g2d.drawLine(source.x, source.y, rightX, source.y);  // Go RIGHT
+                    g2d.drawLine(rightX, source.y, rightX, target.y);  // Go DOWN to target
                 } else {
-                    // Da blocco intermedio: solo verticale
+                    // From intermediate block: only vertical
                     g2d.drawLine(source.x, source.y, source.x, target.y);
                 }
             }
