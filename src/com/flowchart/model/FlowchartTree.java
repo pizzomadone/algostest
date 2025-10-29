@@ -82,6 +82,9 @@ public class FlowchartTree {
     /**
      * Inserts a block within a decision branch (left or right).
      * Maintains the branch structure and merge connection properties.
+     *
+     * SPECIAL CASE: If inserting a DECISION block (nested IF), creates the complete
+     * structure with diamond, two branches, and merge point.
      */
     private Block insertBlockInBranch(Connection conn, BlockType type, String text,
                                       Block sourceBlock, Block targetBlock) {
@@ -97,6 +100,82 @@ public class FlowchartTree {
         int blockX = sourcePos.x;
         int blockY = (sourcePos.y + targetBlock.getPosition().y) / 2;
 
+        // SPECIAL CASE: Inserting a DECISION block (nested IF)
+        // Must create complete IF structure: diamond + 2 branches + merge point
+        if (type == BlockType.DECISION) {
+            Block decisionBlock = new Block(BlockType.DECISION, text, new Point(blockX, blockY));
+
+            // Create merge point for this nested IF
+            // It will be positioned between the decision and the target
+            int nestedMergeX = blockX + 50;
+            int nestedMergeY = blockY + VERTICAL_SPACING;
+            Block nestedMergePoint = new Block(BlockType.MERGE, "", new Point(nestedMergeX, nestedMergeY));
+            nestedMergePoint.setSize(new Dimension(MERGE_POINT_SIZE, MERGE_POINT_SIZE));
+            nestedMergePoint.setVisible(true);
+
+            // Connect source → decision (maintaining branch info)
+            Connection toDecision = new Connection(sourceBlock, decisionBlock, conn.getLabel(),
+                                                   conn.getSourceEdge(), "top");
+            toDecision.setMergeConnection(true);
+            toDecision.setMergeBranch(branch);
+            sourceBlock.addConnection(toDecision);
+
+            // Create two branches from decision to its merge point
+            // Left branch (YES)
+            Connection yesToNestedMerge = new Connection(decisionBlock, nestedMergePoint, "SI", "left", "left");
+            yesToNestedMerge.setMergeConnection(true);
+            yesToNestedMerge.setMergeBranch("left");
+            decisionBlock.addConnection(yesToNestedMerge);
+
+            // Right branch (NO)
+            Connection noToNestedMerge = new Connection(decisionBlock, nestedMergePoint, "NO", "right", "right");
+            noToNestedMerge.setMergeConnection(true);
+            noToNestedMerge.setMergeBranch("right");
+            decisionBlock.addConnection(noToNestedMerge);
+
+            // Connect nested merge point → target (continuing in the outer branch)
+            Connection nestedMergeToTarget = new Connection(nestedMergePoint, targetBlock, "",
+                                                             "bottom", conn.getTargetEdge());
+            nestedMergeToTarget.setMergeConnection(true);
+            nestedMergeToTarget.setMergeBranch(branch); // Stay in same outer branch
+            nestedMergePoint.addConnection(nestedMergeToTarget);
+
+            recalculateLayout();
+            return decisionBlock;
+        }
+
+        // SPECIAL CASE: Inserting a LOOP block (nested loop in branch)
+        // Must create complete loop structure: loop block + body + backward connection
+        if (type == BlockType.WHILE_LOOP || type == BlockType.FOR_LOOP || type == BlockType.DO_WHILE_LOOP) {
+            Block loopBlock = new Block(type, text, new Point(blockX, blockY));
+            Block bodyBlock = new Block(BlockType.LOOP_BODY, "corpo", new Point(blockX, blockY + VERTICAL_SPACING));
+
+            // Connect source → loop (maintaining branch info)
+            Connection toLoop = new Connection(sourceBlock, loopBlock, conn.getLabel(),
+                                              conn.getSourceEdge(), "top");
+            toLoop.setMergeConnection(true);
+            toLoop.setMergeBranch(branch);
+            sourceBlock.addConnection(toLoop);
+
+            // loopBlock → bodyBlock (YES - enter loop body)
+            Connection toBody = new Connection(loopBlock, bodyBlock, "SI", false);
+            loopBlock.addConnection(toBody);
+
+            // bodyBlock → loopBlock (return arrow) - MARKED AS BACKWARD
+            Connection backToLoop = new Connection(bodyBlock, loopBlock, "", true);
+            bodyBlock.addConnection(backToLoop);
+
+            // loopBlock → targetBlock (NO - exit loop, continuing in outer branch)
+            Connection exitLoop = new Connection(loopBlock, targetBlock, "NO", "bottom", conn.getTargetEdge());
+            exitLoop.setMergeConnection(true);
+            exitLoop.setMergeBranch(branch);
+            loopBlock.addConnection(exitLoop);
+
+            recalculateLayout();
+            return loopBlock;
+        }
+
+        // REGULAR CASE: Simple block insertion
         Block newBlock = new Block(type, text, new Point(blockX, blockY));
 
         // Recreate connections maintaining Manhattan routing and branch info
