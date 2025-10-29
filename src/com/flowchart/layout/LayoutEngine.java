@@ -35,21 +35,30 @@ public class LayoutEngine {
      * @param root The root block (START block)
      */
     public void performLayout(Block root) {
+        System.out.println("=== LAYOUT ENGINE CALLED ===");
+
         // Build the layout tree structure
         LayoutNode layoutRoot = buildLayoutTree(root, new HashSet<>());
 
         if (layoutRoot == null) {
+            System.out.println("WARNING: layoutRoot is null!");
             return;
         }
 
+        System.out.println("Pass 1: Calculating dimensions...");
         // Pass 1: Calculate required dimensions (bottom-up)
         calculateDimensions(layoutRoot);
+        System.out.println("Root required width: " + layoutRoot.getRequiredWidth() + ", height: " + layoutRoot.getRequiredHeight());
 
+        System.out.println("Pass 2: Assigning positions...");
         // Pass 2: Assign absolute positions (top-down)
         assignPositions(layoutRoot, START_X, START_Y);
 
+        System.out.println("Pass 3: Applying positions to blocks...");
         // Pass 3: Apply calculated positions to actual blocks
         applyPositionsToBlocks(layoutRoot);
+
+        System.out.println("=== LAYOUT ENGINE DONE ===\n");
     }
 
     /**
@@ -520,7 +529,10 @@ public class LayoutEngine {
 
         // Apply position to this node's block
         if (node.hasBlock()) {
-            node.getBlock().setPosition(new Point(node.getAbsoluteX(), node.getAbsoluteY()));
+            Point newPos = new Point(node.getAbsoluteX(), node.getAbsoluteY());
+            node.getBlock().setPosition(newPos);
+            System.out.println("  Block " + node.getBlock().getType() + " (" + node.getBlock().getText() +
+                             ") positioned at: " + newPos.x + "," + newPos.y);
         }
 
         // Recursively apply to children
@@ -531,9 +543,11 @@ public class LayoutEngine {
         // Apply to branches if this is a decision node
         if (node.isDecision()) {
             if (node.getLeftBranch() != null) {
+                System.out.println("  Applying to LEFT branch...");
                 applyPositionsToBlocks(node.getLeftBranch());
             }
             if (node.getRightBranch() != null) {
+                System.out.println("  Applying to RIGHT branch...");
                 applyPositionsToBlocks(node.getRightBranch());
             }
         }
