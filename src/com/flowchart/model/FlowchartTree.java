@@ -1,6 +1,5 @@
 package com.flowchart.model;
 
-import com.flowchart.layout.LayoutEngine;
 import static com.flowchart.layout.LayoutConstants.*;
 
 import java.awt.Dimension;
@@ -10,14 +9,14 @@ import java.util.List;
 
 /**
  * Manages the flowchart tree structure and delegates layout calculations
- * to the LayoutEngine for proper positioning of all blocks.
+ * to SimpleLayoutCalculator for proper positioning of all blocks.
  */
 public class FlowchartTree {
     private Block root;
-    private final LayoutEngine layoutEngine;
+    private final SimpleLayoutCalculator layoutCalculator;
 
     public FlowchartTree() {
-        this.layoutEngine = new LayoutEngine();
+        this.layoutCalculator = new SimpleLayoutCalculator();
 
         // Create START block
         root = new Block(BlockType.START, "Inizio", new Point(START_X, START_Y));
@@ -418,11 +417,11 @@ public class FlowchartTree {
     }
 
     /**
-     * Recalculates the layout of all blocks using the LayoutEngine.
+     * Recalculates the layout of all blocks using the SimpleLayoutCalculator.
      * This is called whenever the structure changes (block insertion/deletion).
      */
     private void recalculateLayout() {
-        layoutEngine.performLayout(root);
+        layoutCalculator.recalculateLayout(root);
     }
 
     /**
