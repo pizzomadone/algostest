@@ -129,18 +129,25 @@ public class SimpleLayoutCalculator {
         System.out.println("  Left branch: " + leftDim.width + "x" + leftDim.height);
         System.out.println("  Right branch: " + rightDim.width + "x" + rightDim.height);
 
-        // Calculate X positions for each branch
-        // Decision center is at x + blockWidth/2
+        // Calculate total width needed for both branches
+        int totalBranchWidth = leftDim.width + MIN_BRANCH_SPACING + rightDim.width;
+
+        // Center the entire structure around the decision block's X
         int decisionCenterX = x + decision.getSize().width / 2;
 
-        // Left branch: position to the left of center
-        int leftBranchX = decisionCenterX - BRANCH_HORIZONTAL_OFFSET - leftDim.width / 2;
+        // Calculate X positions for each branch
+        // Left branch: starts at center - (totalWidth/2), centered within its space
+        int leftBranchCenterX = decisionCenterX - (totalBranchWidth / 2) + (leftDim.width / 2);
+        int leftBranchX = leftBranchCenterX - (leftDim.width / 2);
 
-        // Right branch: position to the right of center
-        int rightBranchX = decisionCenterX + BRANCH_HORIZONTAL_OFFSET - rightDim.width / 2;
+        // Right branch: starts after left branch + spacing, centered within its space
+        int rightBranchCenterX = leftBranchCenterX + (leftDim.width / 2) + MIN_BRANCH_SPACING + (rightDim.width / 2);
+        int rightBranchX = rightBranchCenterX - (rightDim.width / 2);
 
-        System.out.println("  Left branch X: " + leftBranchX);
-        System.out.println("  Right branch X: " + rightBranchX);
+        System.out.println("  Decision center X: " + decisionCenterX);
+        System.out.println("  Total branch width needed: " + totalBranchWidth);
+        System.out.println("  Left branch X: " + leftBranchX + " (center: " + leftBranchCenterX + ")");
+        System.out.println("  Right branch X: " + rightBranchX + " (center: " + rightBranchCenterX + ")");
 
         // Layout left branch
         int leftBottomY = branchStartY;
